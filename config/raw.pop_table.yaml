@@ -1,0 +1,24 @@
+schema_name: raw
+table_name: pop
+vars:
+  etl_batch_ID: INT
+  geo_type: VARCHAR(5)
+  geo_scope: VARCHAR(4)
+  geo_year: VARCHAR(4)
+  geo_id: VARCHAR(15)
+  r_type: SMALLINT
+  year: VARCHAR(4)
+	hispanic: VARCHAR(1)
+	agestr: VARCHAR(7)
+	gender: VARCHAR(1)
+	racemars: VARCHAR(15)
+	pop: FLOAT
+	age: INT
+	age11: SMALLINT
+	age20: SMALLINT
+	s: SMALLINT
+	h: SMALLINT
+	r1_3: SMALLINT
+	r2_4: SMALLINT
+	rcode: SMALLINT
+	fips_co: SMALLINT

@@ -1,11 +1,17 @@
-raw_schema: load_raw
+raw_schema: raw
 stage_schema: ref
 archive_schema: archive
+table_name: pop
 path_raw: //phdata01/DROF_DATA/DOH DATA/POP/data/raw
 path_tmp: C:/temp/pop
-path_informatica: //kcitetldepim001/Informatica/APDE/Population
-pop_types:
-  Block: blk10
+index_type: ccs
+index_name: idx_ccs_ref_pop
+geo_types:
+  Block: blk
+  BlockGroup: blkg
   County: cou
+  LegDist: lgd
   SchoolDist: scd
+  State: ste
+  Tract: trc
   ZipCode: zip
