@@ -1,0 +1,11 @@
+raw_schema: load_raw
+stage_schema: ref
+archive_schema: archive
+path_raw: //phdata01/DROF_DATA/DOH DATA/POP/data/raw
+path_tmp: C:/temp/pop
+path_informatica: //kcitetldepim001/Informatica/APDE/Population
+pop_types:
+  Block: blk10
+  County: cou
+  SchoolDist: scd
+  ZipCode: zip
