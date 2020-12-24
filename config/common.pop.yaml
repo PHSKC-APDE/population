@@ -6,3 +6,21 @@ path_raw: //phdata01/DROF_DATA/DOH DATA/POP/data/raw
 path_tmp: C:/temp/pop
 index_type: ccs
 index_name: idx_ccs_ref_pop
+geo_type:
+  Block: blk
+  BlockGroup: blkg
+  County: cou
+  LegDist: lgd
+  SchoolDist: scd
+  State: ste
+  Tract: trc
+  ZipCode: zip
+geo_scope:
+  blk: kps
+  blkg: kps
+  cou: 
+  lgd: 
+  scd: 
+  ste: 
+  trc: 
+  zip: wa
