@@ -1,6 +1,6 @@
 schema_name: raw
 table_name: pop
-field_term: ","
+field_term: ','
 row_term: \n
 vars:
   etl_batch_id: INTEGER
