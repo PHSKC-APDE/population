@@ -8,17 +8,17 @@ vars:
   geo_id: VARCHAR(15)
   r_type: SMALLINT
   year: VARCHAR(4)
-	hispanic: VARCHAR(1)
-	agestr: VARCHAR(7)
-	gender: VARCHAR(1)
-	racemars: VARCHAR(15)
-	pop: FLOAT
-	age: INTEGER
-	age11: SMALLINT
-	age20: SMALLINT
-	s: SMALLINT
-	h: SMALLINT
-	r1_3: SMALLINT
-	r2_4: SMALLINT
-	rcode: SMALLINT
-	fips_co: SMALLINT
+  hispanic: VARCHAR(1)
+  agestr: VARCHAR(7)
+  gender: VARCHAR(1)
+  racemars: VARCHAR(15)
+  pop: FLOAT
+  age: INTEGER
+  age11: SMALLINT
+  age20: SMALLINT
+  s: SMALLINT
+  h: SMALLINT
+  r1_3: SMALLINT
+  r2_4: SMALLINT
+  rcode: SMALLINT
+  fips_co: SMALLINT
