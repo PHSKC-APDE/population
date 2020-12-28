@@ -4,17 +4,17 @@ field_term: ,
 row_term: \n
 vars:
   etl_batch_ID: INTEGER
+  year: VARCHAR(4)
+  geo_id: VARCHAR(15)
+  racemars: VARCHAR(15)
+  gender: VARCHAR(1)
+  agestr: VARCHAR(7)
+  hispanic: VARCHAR(1)
+  pop: FLOAT
   geo_type: VARCHAR(5)
   geo_scope: VARCHAR(4)
   geo_year: VARCHAR(4)
-  geo_id: VARCHAR(15)
   r_type: SMALLINT
-  year: VARCHAR(4)
-  hispanic: VARCHAR(1)
-  agestr: VARCHAR(7)
-  gender: VARCHAR(1)
-  racemars: VARCHAR(15)
-  pop: FLOAT
   age: INTEGER
   age11: SMALLINT
   age20: SMALLINT
