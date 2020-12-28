@@ -10,7 +10,8 @@ vars:
   gender: VARCHAR(1)
   agestr: VARCHAR(7)
   hispanic: VARCHAR(1)
-  pop: FLOAT
+  pop_raw: VARCHAR(25)
+vars_add:
   geo_type: VARCHAR(5)
   geo_scope: VARCHAR(4)
   geo_year: VARCHAR(4)
@@ -24,3 +25,4 @@ vars:
   r2_4: SMALLINT
   rcode: SMALLINT
   fips_co: SMALLINT
+  pop: FLOAT
