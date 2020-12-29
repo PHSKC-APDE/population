@@ -63,3 +63,17 @@ drop_table_f <- function(
     .con = conn)
   DBI::dbExecute(conn, drop_code)
 }
+
+get_table_cols_f <- function(
+  conn,
+  schema,
+  table) {
+  
+  object <- patste0(schema, ".", table)
+  columns <- DBI::dbGetQuery(conn,
+                             glue:glue_sql(
+                               "SELECT c.name 'col' FROM sys.columns c 
+                               WHERE c.object_id = OBJECT_ID({object})",
+                               .con = conn))
+  return(columns)
+}
