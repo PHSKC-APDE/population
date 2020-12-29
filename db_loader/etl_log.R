@@ -85,15 +85,6 @@ qa_etl_rows_f <- function(
   etl_schema <- "metadata"
   etl_table <- "pop_etl_log"
   
-  for(i in 1:nrow(rows_sql)) {
-    sql_update <- glue::glue_sql(
-      "UPDATE {`etl_schema`}.{`etl_table`}
-      SET qa_rows_load = {rows_sql[i, 2]}, 
-      load_raw_datetime = GETDATE()
-      WHERE id = {rows_sql[i, 1]} ",
-      .con = conn)
-    DBI::dbExecute(conn, sql_update)
-  }
   sql_get <- glue::glue_sql(
     "SELECT id, qa_rows_file, qa_rows_load FROM {`etl_schema`}.{`etl_table`} 
       WHERE qa_rows_file <> qa_rows_load
