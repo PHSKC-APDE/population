@@ -89,7 +89,7 @@ qa_etl_rows_f <- function(
     DBI::dbExecute(conn, glue::glue_sql(
       "UPDATE {`etl_schema`}.{`etl_table`}
       SET qa_rows_load = {rows_sql[i,2]}
-      WHERE etl_batch_id = {rows_sql[i,1]}",
+      WHERE id = {rows_sql[i,1]}",
       .con = conn))
   }
   
