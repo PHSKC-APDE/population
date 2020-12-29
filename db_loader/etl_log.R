@@ -63,14 +63,14 @@ update_etl_log_datetime_f <- function(
   conn,
   etl_batch_id,
   field) {
-  
+
   ### SET DATABASE SETTINGS
   etl_schema <- "metadata"
   etl_table <- "pop_etl_log"
   
   DBI::dbExecute(conn, glue::glue_sql(
     "UPDATE {`etl_schema`}.{`etl_table`}
-    SET {`field'} = GETDATE()
+    SET {`field`} = GETDATE()
     WHERE id = {etl_batch_id}",
     .con = conn))
 }

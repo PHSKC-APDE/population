@@ -11,13 +11,11 @@ load_raw_f <- function(
   path_tmp,
   data,
   etl_batch_id) {
-  
+
   file_tmp <- paste0(path_tmp, "/tmp.txt")
-  if (grepl(":", file_tmp) == T) { 
-    file_load <- gsub("/","\\\\",file_tmp)
-  }
-  else { file_load <- file_tmp
-  }
+  if (grepl(":", file_tmp) == T) { file_load <- gsub("/","\\\\",file_tmp) 
+  } else { file_load <- file_tmp }
+  
   write.table(data_load, file = file_tmp, sep = "\t", eol = "\n", quote = F, row.names = F, col.names = T)
   create_table_f(conn = conn, config = config)
   bcp_args <- c(glue(' PH_APDEStore.{config$schema_name}.{config$table_name} IN ', 
@@ -25,7 +23,6 @@ load_raw_f <- function(
                      ' -t {config$field_term} -r {config$row_term} -C 65001 -F 2 ',
                      ' -S KCITSQLUTPDBH51 -T -b 100000 -c '))
   
-  print(bcp_args)
   system2(command = "bcp", args = c(bcp_args))
   alter_table_f(conn = conn, config = config)
   sql_get <- glue::glue_sql(
@@ -37,10 +34,11 @@ load_raw_f <- function(
     .con = conn)
   
   rows_loaded <- DBI::dbGetQuery(conn, sql_get)
+  
   for(i in 1:nrow(rows_loaded)) {
     update_etl_log_datetime_f(
       conn = conn, 
-      etl_batchid = rows_loaded[i, 1],
+      etl_batch_id = rows_loaded[i, 1],
       field = "load_raw_datetime")
   }
   file.remove(file_tmp)
