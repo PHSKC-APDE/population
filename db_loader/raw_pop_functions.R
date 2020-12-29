@@ -49,6 +49,9 @@ clean_raw_f <- function(
   conn,
   config) {
   
+  etl_schema <- "metadata"
+  etl_table <- "pop_etl_log"
+  
   ### UPDATE FIELDS BASED ON ETL LOG INFO ###
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE R
@@ -56,28 +59,28 @@ clean_raw_f <- function(
     R.geo_scope = E.geo_scope, 
     R.geo_year = E.geo_year, 
     R.r_type = E.r_type
-    FROM {`config$schema_name`}.{`{config$table_name}`} R
-    INNER JOIN {`etl_schema`}.{`{etl_table}`} E ON R.etl_batch_id = E.id
+    FROM {`config$schema_name`}.{`config$table_name`} R
+    INNER JOIN {`etl_schema`}.{`etl_table`} E ON R.etl_batch_id = E.id
     WHERE R.geo_type IS NULL",
     .con = conn))
   
   ### FIX RACEMARS TO HAVE LEADING ZEROES ###
   DBI::dbExecute(conn,glue::glue_sql(
-    "UPDATE {`config$schema_name`}.{`{config$table_name}`}
+    "UPDATE {`config$schema_name`}.{`config$table_name`}
     SET racemars = RIGHT('0000'+ CAST(racemars AS VARCHAR(5)), 5)
     WHERE LEN(racemars) < 5 AND r_type = 97",
     .con = conn))
   
   ### FIX AGESTR ###
   DBI::dbExecute(conn,glue::glue_sql(
-    "UPDATE {`config$schema_name`}.{`{config$table_name}`}
+    "UPDATE {`config$schema_name`}.{`config$table_name`}
     SET agestr = LEFT(agestr, 3)
     WHERE LEN(agestr) > 3",
     .con = conn))
   
   ### SET AGE ###
   DBI::dbExecute(conn,glue::glue_sql(
-    "UPDATE {`config$schema_name`}.{`{config$table_name}`}
+    "UPDATE {`config$schema_name`}.{`config$table_name`}
     SET age = CAST(agestr AS SMALLINT)
     WHERE age IS NULL",
     .con = conn))
@@ -86,7 +89,7 @@ clean_raw_f <- function(
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE R
     SET R.age11 = X.new_value_num
-    FROM {`config$schema_name`}.{`{config$table_name}`} R
+    FROM {`config$schema_name`}.{`config$table_name`} R
     INNER JOIN ref.pop_crosswalk X ON X.old_value_num_min <= R.age 
       AND X.old_value_num_max >= R.age
     WHERE X.new_column = 'age11' AND X.old_column = 'age' AND R.age11 IS NULL",
@@ -96,7 +99,7 @@ clean_raw_f <- function(
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE R
     SET R.age20 = X.new_value_num
-    FROM {`config$schema_name`}.{`{config$table_name}`} R
+    FROM {`config$schema_name`}.{`config$table_name`} R
     INNER JOIN ref.pop_crosswalk X ON X.old_value_num_min <= R.age 
       AND X.old_value_num_max >= R.age
     WHERE X.new_column = 'age20' AND X.old_column = 'age' AND R.age20 IS NULL",
@@ -106,7 +109,7 @@ clean_raw_f <- function(
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE R
     SET R.s = X.new_value_num
-    FROM {`config$schema_name`}.{`{config$table_name}`} R
+    FROM {`config$schema_name`}.{`config$table_name`} R
     INNER JOIN ref.pop_crosswalk X ON X.old_value_txt = R.gender 
     WHERE X.new_column = 's' AND X.old_column = 'gender' AND R.s IS NULL",
     .con = conn))
@@ -114,7 +117,7 @@ clean_raw_f <- function(
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE R
     SET R.h = X.new_value_num
-    FROM {`config$schema_name`}.{`{config$table_name}`} R
+    FROM {`config$schema_name`}.{`config$table_name`} R
     INNER JOIN ref.pop_crosswalk X ON X.old_value_txt = R.hispanic 
     WHERE X.new_column = 'h' AND X.old_column = 'hispanic' AND R.h IS NULL",
     .con = conn))
@@ -122,7 +125,7 @@ clean_raw_f <- function(
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE R
     SET R.rcode = X.new_value_num
-    FROM {`config$schema_name`}.{`{config$table_name}`} R
+    FROM {`config$schema_name`}.{`config$table_name`} R
     INNER JOIN ref.pop_crosswalk X ON X.old_value_txt = R.racemars 
       AND R.r_type = X.r_type
     WHERE X.new_column = 'rcode' AND X.old_column = 'racemars' AND R.rcode IS NULL",
@@ -132,7 +135,7 @@ clean_raw_f <- function(
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE R
     SET R.r1_3 = X.new_value_num
-    FROM {`config$schema_name`}.{`{config$table_name}`} R
+    FROM {`config$schema_name`}.{`config$table_name`} R
     INNER JOIN ref.pop_crosswalk X ON X.old_value_num_min <= R.rcode 
       AND X.old_value_num_max >= R.rcode AND R.r_type = X.r_type
     WHERE X.new_column = 'r1_3' AND X.old_column = 'rcode' AND R.r1_3 IS NULL",
@@ -148,7 +151,7 @@ clean_raw_f <- function(
     WHERE X.new_column = 'r2_4' AND X.old_column = 'rcode' AND R.r2_4 IS NULL",
     .con = conn))
   DBI::dbExecute(conn,glue::glue_sql(
-    "UPDATE {`config$schema_name`}.{`{config$table_name}`}
+    "UPDATE {`config$schema_name`}.{`config$table_name`}
     SET r2_4 = 6 WHERE h = 1",
     .con = conn))
   
