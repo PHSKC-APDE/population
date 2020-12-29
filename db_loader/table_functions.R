@@ -69,7 +69,7 @@ get_table_cols_f <- function(
   schema,
   table) {
   
-  object <- patste0(schema, ".", table)
+  object <- paste0(schema, ".", table)
   columns <- DBI::dbGetQuery(conn,
                              glue:glue_sql(
                                "SELECT c.name 'col' FROM sys.columns c 
