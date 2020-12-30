@@ -16,7 +16,7 @@ load_raw_f <- function(
   if (grepl(":", file_tmp) == T) { file_load <- gsub("/","\\\\",file_tmp) 
   } else { file_load <- file_tmp }
   
-  write.table(data_load, file = file_tmp, sep = "\t", eol = "\n", quote = F, row.names = F, col.names = T)
+  write.table(data, file = file_tmp, sep = "\t", eol = "\n", quote = F, row.names = F, col.names = T)
   create_table_f(conn = conn, config = config)
   bcp_args <- c(glue(' PH_APDEStore.{config$schema_name}.{config$table_name} IN ', 
                      ' "{file_load}" ',
@@ -24,13 +24,12 @@ load_raw_f <- function(
                      ' -S KCITSQLUTPDBH51 -T -b 100000 -c '))
   
   system2(command = "bcp", args = c(bcp_args))
-  alter_table_f(conn = conn, config = config)
+  
   sql_get <- glue::glue_sql(
     "SELECT etl_batch_id, COUNT(*) 
       FROM {`config$schema_name`}.{`{config$table_name}`} 
-      WHERE geo_type IS NULL
-      GROUP BY etl_batch_id
-      ORDER BY etl_batch_id",
+      WHERE etl_batch_id = {etl_batch_id}
+      GROUP BY etl_batch_id",
     .con = conn)
   
   rows_loaded <- DBI::dbGetQuery(conn, sql_get)
@@ -63,6 +62,8 @@ clean_raw_f <- function(
     INNER JOIN {`etl_schema`}.{`etl_table`} E ON R.etl_batch_id = E.id
     WHERE R.geo_type IS NULL",
     .con = conn))
+  
+  alter_table_f(conn = conn, config = config)
   
   ### FIX RACEMARS TO HAVE LEADING ZEROES ###
   DBI::dbExecute(conn,glue::glue_sql(
