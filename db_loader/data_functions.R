@@ -86,7 +86,9 @@ load_data_f <- function(
         message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, ": Loading raw data"))
         qa_rows_sql <- load_raw_f(conn = conn, config = raw_config, 
                                 path_tmp = path_tmp, path_tmptxt = path_tmptxt,
-                                data = data, etl_batch_id = etl_batch_id)
+                                data = data, etl_batch_id = etl_batch_id,
+                                retry = retry)
+        
         qa_rows_results <- qa_etl_rows_f(conn = conn, config = pop_config,
                                        rows_sql = qa_rows_sql + data_start, "qa_rows_load")
         message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, ": Cleaning raw data"))
