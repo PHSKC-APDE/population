@@ -74,8 +74,8 @@ load_data_f <- function(
                                       etl_batch_id = etl_batch_id)
         if(nrow(data_start) > 0) {
           message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, 
-                         ": Loading data into raw.pop previously failed. Picking up at row ", data_start[i,2] + 1))
-          data <- data[-(1:data_start[i,2]),]
+                         ": Loading data into raw.pop previously failed. Picking up at row ", data_start[1,2] + 1))
+          data <- data[-(1:data_start[1,2]),]
         }
         message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, ": Loading raw data"))
         qa_rows_sql <- load_raw_f(conn = conn, config = raw_config, 
