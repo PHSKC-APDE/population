@@ -31,7 +31,7 @@ pop_config <- yaml::yaml.load(RCurl::getURL("https://raw.githubusercontent.com/P
 raw_config <- yaml::yaml.load(RCurl::getURL("https://raw.githubusercontent.com/PHSKC-APDE/Population/master/config/raw.pop_table.yaml"))
 path_raw <- pop_config[["path_raw"]]
 path_tmp <-  pop_config[["path_tmp"]]
-path_tmptxt <-  paste0(path_tmp, "/tmp")
+path_tmptxt <-  paste0(path_raw, "/tmp")
 
 # List of folders that have raw data
 f_list <- list.dirs(path = path_raw, full.names = F, recursive = F)

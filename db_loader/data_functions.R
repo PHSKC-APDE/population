@@ -73,16 +73,20 @@ load_data_f <- function(
         data_start <- failed_raw_load_f(conn = conn, config = raw_config, 
                                       etl_batch_id = etl_batch_id)
         if(nrow(data_start) > 0) {
+          data_start <- data_start[1,2]
           message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, 
-                         ": Loading data into raw.pop previously failed. Picking up at row ", data_start[1,2] + 1))
-          data <- data[-(1:data_start[1,2]),]
+                         ": Loading data into raw.pop previously failed. Picking up at row ", data_start + 1))
+          data <- data[-(1:data_start),]
+        }
+        else {
+          data_start = 0
         }
         message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, ": Loading raw data"))
         qa_rows_sql <- load_raw_f(conn = conn, config = raw_config, 
                                 path_tmp = path_tmp, path_tmptxt = path_tmptxt,
                                 data = data, etl_batch_id = etl_batch_id)
         qa_rows_results <- qa_etl_rows_f(conn = conn, config = pop_config,
-                                       rows_sql = qa_rows_sql, "qa_rows_load")
+                                       rows_sql = qa_rows_sql + data_start, "qa_rows_load")
         message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, ": Cleaning raw data"))
         clean_raw_f(conn = conn, config = raw_config)
         to_archive <- DBI::dbGetQuery(conn, glue::glue_sql(
