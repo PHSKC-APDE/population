@@ -13,11 +13,19 @@ load_raw_f <- function(
   data,
   etl_batch_id) {
 
-  file_tmp <- paste0(path_tmptxt, "/tmp.txt")
+  file_tmp <- paste0(path_tmp, "/tmp.txt")
+  file_tmptxt <- paste0(path_tmptxt, "/tmp.txt")
   if (grepl(":", file_tmp) == T) { file_load <- gsub("/","\\\\",file_tmp) 
   } else { file_load <- file_tmp }
   
+  
   write.table(data, file = file_tmp, sep = "\t", eol = "\n", quote = F, row.names = F, col.names = T)
+  file.copy(file_tmp, path_tmptxt)
+  file.remove(file_tmp)
+  
+  if (grepl(":", file_tmptxt) == T) { file_load <- gsub("/","\\\\",file_tmptxt) 
+  } else { file_load <- file_tmptxt }
+  
   create_table_f(conn = conn, config = config)
   bcp_args <- c(glue(' PH_APDEStore.{config$schema_name}.{config$table_name} IN ', 
                      ' "{file_load}" ',
@@ -41,7 +49,7 @@ load_raw_f <- function(
       etl_batch_id = rows_loaded[i, 1],
       field = "load_raw_datetime")
   }
-  file.remove(file_tmp)
+  file.remove(file_tmptxt)
   return(rows_loaded)
 }
 
