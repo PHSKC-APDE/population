@@ -38,7 +38,7 @@ create_etl_log_f <- function(
   etl_batch_id <- DBI::dbGetQuery(conn, sql_get)
   
   ### CHECK IF RAW DATA ALREADY LOADED TO REF ###
-  if (etl_batch_id == 0) {
+  if (nrow(etl_batch_id) == 0) {
     sql_get <- glue::glue_sql(
       "SELECT TOP (1) (id * -1) FROM {`etl_schema`}.{`etl_table`} 
       WHERE batch_name = {batch_name} AND file_name = {file_name} 
@@ -50,7 +50,7 @@ create_etl_log_f <- function(
     etl_batch_id <- DBI::dbGetQuery(conn, sql_get)
   }
   
-  if (etl_batch_id == 0) {
+  if (nrow(etl_batch_id) == 0) {
     ### CREATE NEW ETL BATCH ID
     sql_load <- glue::glue_sql(
       "INSERT INTO {`etl_schema`}.{`etl_table`} 
