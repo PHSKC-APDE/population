@@ -95,7 +95,8 @@ update_etl_log_datetime_f <- function(
 qa_etl_rows_f <- function(
   conn,
   config,
-  rows_sql) {
+  rows_sql,
+  field) {
   
   ### SET DATABASE SETTINGS
   etl_schema <- "metadata"
@@ -104,7 +105,7 @@ qa_etl_rows_f <- function(
   for(i in 1:nrow(rows_sql)) {
     DBI::dbExecute(conn, glue::glue_sql(
     "UPDATE {`etl_schema`}.{`etl_table`} 
-    SET qa_rows_load = {rows_sql[i,2]} 
+    SET {`field`} = {rows_sql[i,2]} 
     WHERE id = {rows_sql[i,1]}", 
     .con = conn))
   }

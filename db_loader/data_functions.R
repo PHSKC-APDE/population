@@ -32,38 +32,40 @@ load_data_f <- function(
     unzipped_files <- as.data.frame(list.files(path_tmp, pattern = "\\.csv$", ignore.case = T))
     # Look at one unzipped file at a time
     for (y in 1:nrow(unzipped_files)) {
-      # Read csv into a data frame
-      message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], ": Reading file"))
-      data <- read.csv(paste0(path_tmp, "/", unzipped_files[y,]))
-      # Change names of columns
-      colnames(data) <- lapply(colnames(data), tolower)
-      for (x in 1:length(colnames(data))) {
-        if (grepl("pop", colnames(data)[x]) == T) { 
-          colnames(data)[x] = "pop"
-        } else if (grepl("racemars", colnames(data)[x]) == T) {
-          colnames(data)[x] = "racemars"
-        }
-        else if (grepl("age", colnames(data)[x]) == T) {
-          colnames(data)[x] = "agestr"
-        }
-        else if (grepl("code", colnames(data)[x]) == T) {
-          colnames(data)[x] = "geo_id"
-        }
-      }
       # Use file name to determine other elements of the data and add to data frame
       file_info <- get_raw_file_info_f(config = pop_config, file_name = unzipped_files[y,])
-      qa_rows_file <- nrow(data)
-      
       etl_batch_id <- create_etl_log_f(conn = conn, config = pop_config, 
                                        batch_name = f_load, file_name = unzipped_files[y,], 
                                        geo_type = file_info$geo_type, geo_scope = file_info$geo_scope,
                                        geo_year = file_info$geo_year, year = file_info$year, 
-                                       r_type = file_info$r_type, qa_rows_file = qa_rows_file)
+                                       r_type = file_info$r_type)
       if (etl_batch_id < 0) {
         message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id * -1, ": Already loaded to ref.pop"))  
       }
       else {
         message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, ": ETL Batch ID created"))
+        # Read csv into a data frame
+        message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], ": Reading file"))
+        data <- read.csv(paste0(path_tmp, "/", unzipped_files[y,]))
+        # Change names of columns
+        colnames(data) <- lapply(colnames(data), tolower)
+        for (x in 1:length(colnames(data))) {
+          if (grepl("pop", colnames(data)[x]) == T) { 
+            colnames(data)[x] = "pop"
+          } else if (grepl("racemars", colnames(data)[x]) == T) {
+            colnames(data)[x] = "racemars"
+          }
+          else if (grepl("age", colnames(data)[x]) == T) {
+            colnames(data)[x] = "agestr"
+          }
+          else if (grepl("code", colnames(data)[x]) == T) {
+            colnames(data)[x] = "geo_id"
+          }
+        }
+        qa_etl_rows_f(conn = conn, config = pop_config, 
+                      rows_sql = data.frame(c(etl_batch_id), c(nrow(data))),
+                      "qa_rows_file")
+        
         data["etl_batch_id"] = etl_batch_id
         data <- data[, c("etl_batch_id", "year", "geo_id", "racemars", 
                        "gender", "agestr", "hispanic", "pop")]
@@ -79,7 +81,7 @@ load_data_f <- function(
                                 path_tmp = path_tmp, path_tmptxt = path_tmptxt,
                                 data = data, etl_batch_id = etl_batch_id)
         qa_rows_results <- qa_etl_rows_f(conn = conn, config = pop_config,
-                                       rows_sql = qa_rows_sql)
+                                       rows_sql = qa_rows_sql, "qa_rows_load")
         message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, ": Cleaning raw data"))
         clean_raw_f(conn = conn, config = raw_config)
         to_archive <- DBI::dbGetQuery(conn, glue::glue_sql(
