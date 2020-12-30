@@ -168,8 +168,9 @@ clean_raw_f <- function(
 get_raw_file_info_f <- function(
   config,
   file_name) {
-  geo_type <- substr(file_name, 1, instr(file_name, "RaceMars") - 5)
-  geo_year <- substr(file_name, instr(file_name, "RaceMars") - 4, instr(file_name, "RaceMars") - 1)
+  file_name <- tolower(file_name)
+  geo_type <- substr(file_name, 1, instr(file_name, "racemars") - 5)
+  geo_year <- substr(file_name, instr(file_name, "racemars") - 4, instr(file_name, "racemars") - 1)
   year <- substr(file_name, nchar(file_name) - 11, nchar(file_name) - 8)
   r_type <- as.integer(substr(file_name, nchar(file_name) - 13, nchar(file_name) - 12))
   geo_types_df <- as.data.frame(config$geo_type)

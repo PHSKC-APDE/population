@@ -7,14 +7,14 @@ path_tmp: C:/temp/pop
 index_type: ccs
 index_name: idx_ccs_ref_pop
 geo_type:
-  Block: blk
-  BlockGroup: blkg
-  County: cou
-  LegDist: lgd
-  SchoolDist: scd
-  State: ste
-  Tract: trc
-  ZipCode: zip
+  block: blk
+  blockgroup: blkg
+  county: cou
+  legdist: lgd
+  schooldist: scd
+  state: ste
+  tract: trc
+  zipcode: zip
 geo_scope:
   blk: kps
   blkg: kps
