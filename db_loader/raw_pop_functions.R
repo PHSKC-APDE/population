@@ -9,6 +9,7 @@ load_raw_f <- function(
   conn,
   config,
   path_tmp,
+  path_tmptxt,
   data,
   etl_batch_id) {
 
