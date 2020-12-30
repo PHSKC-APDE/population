@@ -13,7 +13,7 @@ load_raw_f <- function(
   data,
   etl_batch_id) {
 
-  file_tmp <- paste0(path_tmp, "/tmp.txt")
+  file_tmp <- paste0(path_tmptxt, "/tmp.txt")
   if (grepl(":", file_tmp) == T) { file_load <- gsub("/","\\\\",file_tmp) 
   } else { file_load <- file_tmp }
   
