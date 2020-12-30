@@ -43,7 +43,7 @@ load_data_f <- function(
         message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id * -1, ": Already loaded to ref.pop"))  
       }
       else {
-        message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, ": ETL Batch ID created"))
+        message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, ": ETL Batch ID"))
         # Read csv into a data frame
         message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], ": Reading file"))
         data <- read.csv(paste0(path_tmp, "/", unzipped_files[y,]))
@@ -69,14 +69,15 @@ load_data_f <- function(
         data["etl_batch_id"] = etl_batch_id
         data <- data[, c("etl_batch_id", "year", "geo_id", "racemars", 
                        "gender", "agestr", "hispanic", "pop")]
-        message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, ": Loading data into raw.pop"))
       
         data_start <- failed_raw_load_f(conn = conn, config = raw_config, 
                                       etl_batch_id = etl_batch_id)
-        if(nrows(data_start) > 0) {
+        if(nrow(data_start) > 0) {
+          message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, 
+                         ": Loading data into raw.pop previously failed. Picking up at row ", rows_sql[i,2] + 1))
           data <- data[-(1:rows_sql[i,2]),]
         }
-      
+        message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, ": Loading raw data"))
         qa_rows_sql <- load_raw_f(conn = conn, config = raw_config, 
                                 path_tmp = path_tmp, path_tmptxt = path_tmptxt,
                                 data = data, etl_batch_id = etl_batch_id)

@@ -20,6 +20,7 @@ load_raw_f <- function(
   if (grepl(":", file_tmp) == T) { file_load <- gsub("/","\\\\",file_tmp) 
   } else { file_load <- file_tmp }
   
+  message("Writing tmp.txt file")
   write.table(data, file = file_tmp, sep = "\t", eol = "\n", quote = F, row.names = F, col.names = T)
   
   create_table_f(conn = conn, config = config, overwrite = !retry)
@@ -28,6 +29,7 @@ load_raw_f <- function(
                      ' -t {config$field_term} -r {config$row_term} -C 65001 -F 2 ',
                      ' -S KCITSQLUTPDBH51 -T -b 100000 -c '))
   
+  message("Loading data into raw.pop")
   system2(command = "bcp", args = c(bcp_args))
   
   sql_get <- glue::glue_sql(
@@ -59,6 +61,7 @@ clean_raw_f <- function(
   alter_table_f(conn = conn, config = config)
   
   ### UPDATE FIELDS BASED ON ETL LOG INFO ###
+  message("Updating fields based on ETL Log Info")
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE R
     SET R.geo_type = E.geo_type, 
@@ -71,6 +74,7 @@ clean_raw_f <- function(
     .con = conn))
   
   ### FIX RACEMARS TO HAVE LEADING ZEROES ###
+  message("Fixing racemars column")
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE {`config$schema_name`}.{`config$table_name`}
     SET racemars = RIGHT('0000'+ CAST(racemars AS VARCHAR(5)), 5)
@@ -78,6 +82,7 @@ clean_raw_f <- function(
     .con = conn))
   
   ### FIX AGESTR ###
+  message("Fixing agestr column")
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE {`config$schema_name`}.{`config$table_name`}
     SET agestr = LEFT(agestr, 3)
@@ -85,6 +90,7 @@ clean_raw_f <- function(
     .con = conn))
   
   ### SET AGE ###
+  message("Setting age column")
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE {`config$schema_name`}.{`config$table_name`}
     SET age = CAST(agestr AS SMALLINT)
@@ -92,6 +98,7 @@ clean_raw_f <- function(
     .con = conn))
   
   ### SET AGE11 USE REF.POP_CROSSWALK ###
+  message("Setting age11 column")
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE R
     SET R.age11 = X.new_value_num
@@ -102,6 +109,7 @@ clean_raw_f <- function(
     .con = conn))
   
   ### SET AGE20 USE REF.POP_CROSSWALK###
+  message("Setting age20 column")
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE R
     SET R.age20 = X.new_value_num
@@ -112,6 +120,7 @@ clean_raw_f <- function(
     .con = conn))
   
   ### SET S USE REF.POP_CROSSWALK ###
+  message("Setting s column")
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE R
     SET R.s = X.new_value_num
@@ -119,7 +128,9 @@ clean_raw_f <- function(
     INNER JOIN ref.pop_crosswalk X ON X.old_value_txt = R.gender 
     WHERE X.new_column = 's' AND X.old_column = 'gender' AND R.s IS NULL",
     .con = conn))
+  
   ### SET H USE REF.POP_CROSSWALK ###
+  message("Setting h column")
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE R
     SET R.h = X.new_value_num
@@ -127,7 +138,9 @@ clean_raw_f <- function(
     INNER JOIN ref.pop_crosswalk X ON X.old_value_txt = R.hispanic 
     WHERE X.new_column = 'h' AND X.old_column = 'hispanic' AND R.h IS NULL",
     .con = conn))
+  
   ### SET RCODE USE REF.POP_CROSSWALK ###
+  message("Setting rcode column")
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE R
     SET R.rcode = X.new_value_num
@@ -138,6 +151,7 @@ clean_raw_f <- function(
     .con = conn))
   
   ### SET R1_3 USE REF.POP_CROSSWALK ###
+  message("Setting r1_3 column")
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE R
     SET R.r1_3 = X.new_value_num
@@ -148,6 +162,7 @@ clean_raw_f <- function(
     .con = conn))
   
   ### SET R2_4 USE REF.POP_CROSSWALK ###
+  message("Setting r2_4 column")
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE R
     SET R.r2_4 = X.new_value_num
@@ -162,6 +177,7 @@ clean_raw_f <- function(
     .con = conn))
   
   ### SET FIPS_CO COLUMN ###
+  message("Setting fips_co column")
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE {`config$schema_name`}.{`{config$table_name}`}
     SET fips_co = CAST(SUBSTRING(geo_id, 3, 3) AS SMALLINT)
