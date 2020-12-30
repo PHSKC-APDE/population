@@ -11,15 +11,18 @@ load_raw_f <- function(
   path_tmp,
   path_tmptxt,
   data,
-  etl_batch_id) {
+  etl_batch_id,
+  retry = F) {
 
   file_tmp <- paste0(path_tmptxt, "/tmp.txt")
+  file.remove(file_tmp)
+  
   if (grepl(":", file_tmp) == T) { file_load <- gsub("/","\\\\",file_tmp) 
   } else { file_load <- file_tmp }
   
   write.table(data, file = file_tmp, sep = "\t", eol = "\n", quote = F, row.names = F, col.names = T)
-
-  create_table_f(conn = conn, config = config)
+  
+  create_table_f(conn = conn, config = config, overwrite = !retry)
   bcp_args <- c(glue(' PH_APDEStore.{config$schema_name}.{config$table_name} IN ', 
                      ' "{file_load}" ',
                      ' -t {config$field_term} -r {config$row_term} -C 65001 -F 2 ',
@@ -193,4 +196,16 @@ get_raw_file_info_f <- function(
   return(data.frame(geo_type, geo_scope, geo_year, year, r_type))
 }
 
-
+failed_raw_load_f <- function(
+  conn,
+  config,
+  etl_batch_id) {
+  sql_get <- glue::glue_sql(
+    "SELECT etl_batch_id, COUNT(*) 
+      FROM {`config$schema_name`}.{`{config$table_name}`} 
+      WHERE etl_batch_id = {etl_batch_id}
+      GROUP BY etl_batch_id",
+    .con = conn)
+  rows_loaded <- DBI::dbGetQuery(conn, sql_get)
+  return(rows_loaded)
+}
