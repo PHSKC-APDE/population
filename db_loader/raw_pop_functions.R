@@ -51,6 +51,8 @@ clean_raw_f <- function(
   etl_schema <- "metadata"
   etl_table <- "pop_etl_log"
   
+  alter_table_f(conn = conn, config = config)
+  
   ### UPDATE FIELDS BASED ON ETL LOG INFO ###
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE R
@@ -62,8 +64,6 @@ clean_raw_f <- function(
     INNER JOIN {`etl_schema`}.{`etl_table`} E ON R.etl_batch_id = E.id
     WHERE R.geo_type IS NULL",
     .con = conn))
-  
-  alter_table_f(conn = conn, config = config)
   
   ### FIX RACEMARS TO HAVE LEADING ZEROES ###
   DBI::dbExecute(conn,glue::glue_sql(
