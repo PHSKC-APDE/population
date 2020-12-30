@@ -69,7 +69,7 @@ load_data_f <- function(
                        "gender", "agestr", "hispanic", "pop")]
         message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, ": Loading data into raw.pop"))
       
-        data_start <- failed_raw_load_f(conn = conn, config = config, 
+        data_start <- failed_raw_load_f(conn = conn, config = raw_config, 
                                       etl_batch_id = etl_batch_id)
         if(nrows(data_start) > 0) {
           data <- data[-(1:rows_sql[i,2]),]
