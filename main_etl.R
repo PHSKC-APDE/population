@@ -43,7 +43,7 @@ message("CHOOSE THE FOLDER TO LOAD RAW DATA FROM")
 f_load <- select.list(choices = f_list)
 
 load_data_f(conn = conn, pop_config = pop_config, raw_config = raw_config,
-  path_raw = path_raw, path_tmp = path_tmp, path_tmptxt = path_tmp, 
+  path_raw = path_raw, path_tmp = path_tmp, path_tmptxt = path_tmptxt, 
   f_load = f_load)
 
 

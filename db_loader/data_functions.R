@@ -11,7 +11,7 @@ load_data_f <- function(
   raw_config,
   path_raw,
   path_tmp,
-  Path_tmptxt,
+  path_tmptxt,
   f_load) {
   
   ### Create list of zip files with csvs in raw data folder
