@@ -88,8 +88,8 @@ qa_etl_rows_f <- function(
   for(i in 1:nrow(rows_sql)) {
     DBI::dbExecute(conn, glue::glue_sql(
     "UPDATE {`etl_schema`}.{`etl_table`} 
-    SET qa_rows_load = {qa_rows_sql[i,2]} 
-    WHERE id = {qa_rows_sql[i,1]}", 
+    SET qa_rows_load = {rows_sql[i,2]} 
+    WHERE id = {rows_sql[i,1]}", 
     .con = conn))
   }
   
