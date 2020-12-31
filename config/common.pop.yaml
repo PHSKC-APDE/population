@@ -18,9 +18,9 @@ geo_type:
 geo_scope:
   blk: kps
   blkg: kps
-  cou: 
-  lgd: 
-  scd: 
-  ste: 
-  trc: 
+  cou: wa
+  lgd: wa
+  scd: wa
+  ste: wa
+  trc: wa
   zip: wa
