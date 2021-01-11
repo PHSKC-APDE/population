@@ -4,71 +4,66 @@
 #
 # 2020-12
 
+### FUNCTION TO CREATE TABLE BASED ON DATAFRAME OF VARS
 create_table_f <- function(
   conn,
-  config,
+  schema,
+  table,
+  vars,
   overwrite = T) {
-  
-  #### VARIABLES ####
-  schema <- config$schema_name
-  table <- config$table_name
-  
-  #### OVERWRITE TABLE ####
+  #### IF OVERWRITE TRUE THEN DROP TABLE ####
   if (overwrite == T) {
-    if (DBI::dbExistsTable(conn, DBI::Id(schema = schema, table = table))) {
-      DBI::dbExecute(conn, 
-                     glue::glue_sql("DROP TABLE {`schema`}.{`table`}",
-                                    .con = conn))
-    }
+    drop_table_f(conn, schema, table)
   }
-  
   #### CREATE TABLE ####  
   create_code <- glue::glue_sql(
     "CREATE TABLE {`schema`}.{`table`} (
-    {DBI::SQL(glue::glue_collapse(glue::glue_sql('{`names(config$vars)`} {DBI::SQL(config$vars)}', 
+    {DBI::SQL(glue::glue_collapse(glue::glue_sql('{`names(vars)`} {DBI::SQL(vars)}', 
     .con = conn), sep = ', \n'))}
     )", 
     .con = conn)
   DBI::dbExecute(conn, create_code)
 }
 
+### FUNCTION TO ALTER TABLE (ADD COLUMNS) BASED ON DATAFRAME OF VARS
 alter_table_f <- function(
   conn,
-  config) {
-  
+  schema,
+  table,
+  vars) {
   #### VARIABLES ####
-  schema <- config$schema_name
-  table <- config$table_name
-  
+  object <- paste0(schema, ".", table)
   #### ALTER TABLE ####  
   alter_code <- glue::glue_sql(
-    "ALTER TABLE {`schema`}.{`table`} 
-    ADD {DBI::SQL(glue::glue_collapse(glue::glue_sql('{`names(config$vars_add)`} {DBI::SQL(config$vars_add)}', 
-    .con = conn), sep = ', \n'))}", 
+    "IF NOT EXISTS(SELECT 1 FROM sys.columns WHERE Name = {names(vars)[1]} AND OBJECT_ID = OBJECT_ID({object}))
+      BEGIN
+        ALTER TABLE {`schema`}.{`table`} 
+        ADD {DBI::SQL(glue::glue_collapse(glue::glue_sql('{`names(vars)`} {DBI::SQL(vars)}', 
+        .con = conn), sep = ', \n'))}
+      END", 
     .con = conn)
   DBI::dbExecute(conn, alter_code)
 }
 
+### FUNCTION TO ALTER TABLE IF TABLE EXISTS
 drop_table_f <- function(
   conn,
-  config) {
-  
-  #### VARIABLES ####
-  schema <- config$schema_name
-  table <- config$table_name
-  
-  #### ALTER TABLE ####  
-  drop_code <- glue::glue_sql(
-    "DROP TABLE {`schema`}.{`table`}", 
-    .con = conn)
-  DBI::dbExecute(conn, drop_code)
+  schema,
+  table) {
+  #### DROP TABLE ####  
+  if (DBI::dbExistsTable(conn, DBI::Id(schema = schema, table = table))) {
+    DBI::dbExecute(conn, 
+                   glue::glue_sql("DROP TABLE {`schema`}.{`table`}",
+                                  .con = conn))
+  }
 }
 
+### FUNCTION TO RETURN LIST OF COLUMNS FROM TABLE
 get_table_cols_f <- function(
   conn,
   schema,
   table) {
-  
+  ### RETURNS LIST OF COLUMNS FROM SPECIFIC TABLE
   object <- paste0(schema, ".", table)
   columns <- DBI::dbGetQuery(conn,
                              glue::glue_sql(
@@ -76,4 +71,29 @@ get_table_cols_f <- function(
                                WHERE c.object_id = OBJECT_ID({object})",
                                .con = conn))
   return(columns)
+}
+
+### FUNCTION TO ADD INDEX TO TABLE
+add_index_f <- function(conn, 
+                        schema,
+                        table,
+                        index_name) {
+  #### ADD INDEX ####
+  message(glue::glue("Adding index ({index_name}) to {schema}.{table}"))
+  dbGetQuery(conn, 
+             glue::glue_sql("CREATE CLUSTERED COLUMNSTORE INDEX {`index_name`} 
+                            ON {`schema`}.{`table`}", 
+                            .con = conn))
+}
+
+### FUNCTION TO DROP INDEX FROM TABLE
+drop_index_f <- function(conn, 
+                        schema,
+                        table,
+                        index_name) {
+  #### REMOVE EXISTING INDEX ID DESIRED ####
+  message("Removing existing clustered columnstore index")
+  dbGetQuery(conn, 
+             glue::glue_sql("DROP INDEX {`index_name`} ON {`schema`}.{`table`}",
+                            .con = conn))
 }

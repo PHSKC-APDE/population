@@ -13,15 +13,21 @@ library(glue) # Safely combine SQL code
 library(RCurl) # Read files from Github
 library(configr) # Read in YAML files
 library(sf) # Read shape files
-library(zip) # Unzip files
+library(utils)
 library(dplyr)
 library(survPen)
+library(reticulate)
 
 ### LOAD FUNCTIONS
-devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/Population/master/db_loader/etl_log.R")
-devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/Population/master/db_loader/table_functions.R")
-devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/Population/master/db_loader/data_functions.R")
-devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/Population/master/db_loader/raw_pop_functions.R")
+#devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/Population/master/db_loader/etl_log.R")
+#devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/Population/master/db_loader/table_functions.R")
+#devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/Population/master/db_loader/data_functions.R")
+#devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/Population/master/db_loader/raw_pop_functions.R")
+
+source(file = "C:/Users/jwhitehurst/OneDrive - King County/GitHub/Population/db_loader/etl_log.R")
+source(file = "C:/Users/jwhitehurst/OneDrive - King County/GitHub/Population/db_loader/table_functions.R")
+source(file = "C:/Users/jwhitehurst/OneDrive - King County/GitHub/Population/db_loader/data_functions.R")
+source(file = "C:/Users/jwhitehurst/OneDrive - King County/GitHub/Population/db_loader/raw_pop_functions.R")
 
 ### Set SQL Connections
 conn <- DBI::dbConnect(odbc::odbc(), "PH_APDEStore51")
@@ -33,17 +39,11 @@ path_raw <- pop_config[["path_raw"]]
 path_tmp <-  pop_config[["path_tmp"]]
 path_tmptxt <-  paste0(path_raw, "/tmp")
 
-# List of folders that have raw data
-f_list <- list.dirs(path = path_raw, full.names = F, recursive = F)
-f_list <- f_list[ f_list != "tmp"]
+# Select the folder to process and run the data processing functions
+select_process_data_f()
 
-### CHOOSE THE FOLDER TO LOAD RAW DATA FROM ###
-message("CHOOSE THE FOLDER TO LOAD RAW DATA FROM")
-f_load <- select.list(choices = f_list)
+warnings()
 
-load_data_f(conn = conn, pop_config = pop_config, raw_config = raw_config,
-  path_raw = path_raw, path_tmp = path_tmp, path_tmptxt = path_tmptxt, 
-  f_load = f_load)
-
-rm(f_load, conn, pop_config, raw_config, path_raw, path_tmp, path_tmptxt, f_list)
-
+# Set path for 7-zip
+old_path <- Sys.getenv("PATH")
+Sys.setenv(PATH = paste(old_path, "C:\\ProgramData\\Microsoft\\AppV\\Client\\Integration\\562FBB69-6389-4697-9A54-9FF814E30039\\Root\\VFS\\ProgramFilesX64\\7-Zip", sep = ";"))
