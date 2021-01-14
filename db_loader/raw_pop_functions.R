@@ -25,25 +25,28 @@ load_raw_f <- function(
     if (file.exists(file_tmp)) {
       file.remove(file_tmp)
     }
-    msg <- paste0("Writing tmp.txt file locally (", Sys.time() , ")")
-    etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-    message(paste0('...', msg))
+    message(paste0('...', 
+                   etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id,
+                                   note = "Writing tmp.txt file locally",
+                                   full_note = F)))
     write.table(data, file = file_tmp, sep = "\t", eol = "\n", quote = F, row.names = F, col.names = T)
     if (file.exists(file_tmptxt)) {
       file.remove(file_tmptxt)
     }
-    msg <- paste0("Copying tmp.txt file to server (", Sys.time() , ")")
-    etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-    message(paste0('...', msg))
+    message(paste0('...', 
+                   etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id,
+                                   note = "Copying tmp.txt file to server",
+                                   full_note = F)))
     file.copy(file_tmp, path_tmptxt)
   } else {
     ### WRITES FILE TO NETWORK FOLDER
     if (file.exists(file_tmptxt)) {
       file.remove(file_tmptxt)
     }
-    msg <- paste0("Writing tmp.txt file to server (", Sys.time() , ")")
-    etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-    message(paste0('...', msg))
+    message(paste0('...', 
+                   etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id,
+                                   note = "Writing tmp.txt file to server",
+                                   full_note = F)))
     write.table(data, file = file_tmptxt, sep = "\t", eol = "\n", quote = F, row.names = F, col.names = T)
     if (grepl(":", file_tmptxt) == T) { file_load <- gsub("/","\\\\", file_tmptxt) 
     } else { file_load <- file_tmptxt }
@@ -64,9 +67,10 @@ load_raw_f <- function(
                      ' "{file_load}" ',
                      ' -t {config$field_term} -r {config$row_term} -C 65001 -F 2 ',
                      ' -S KCITSQLUTPDBH51 -T -b 100000 -c '))
-  msg <- paste0("Loading data into raw.pop (", Sys.time() , ")")
-  etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-  message(paste0('...', msg))
+  message(paste0('...', 
+                 etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id,
+                                 note = "Loading data into raw.pop",
+                                 full_note = F)))
   system2(command = "bcp", args = c(bcp_args))
   
   ### GETS NUMBER OF ROWS LOADED TO SQL AND RETURNS THE NUMBER
@@ -103,9 +107,10 @@ clean_raw_f <- function(
                 table = config$table_name, vars = config$vars_add)
   
   ### UPDATE FIELDS BASED ON ETL LOG INFO ###
-  msg <- paste0("Updating fields based on ETL Log Info (", Sys.time() , ")")
-  etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-  message(paste0('...', msg))
+  message(paste0('...', 
+                 etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id,
+                                 note = "Updating fields based on ETL Log Info",
+                                 full_note = F)))
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE R
     SET R.geo_type = E.geo_type, 
@@ -118,9 +123,10 @@ clean_raw_f <- function(
     .con = conn))
   
   ### SET FIPS_CO COLUMN ###
-  msg <- paste0("Setting [fips_co] column (", Sys.time() , ")")
-  etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-  message(paste0('...', msg))
+  message(paste0('...', 
+                 etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id,
+                                 note = "Setting [fips_co] column",
+                                 full_note = F)))
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE {`config$schema_name`}.{`config$table_name`}
     SET fips_co = CAST(SUBSTRING(geo_id, 3, 3) AS SMALLINT)
@@ -128,18 +134,20 @@ clean_raw_f <- function(
     .con = conn))
   
   ### REMOVE DATA BASED ON GEO_SCOPE ###
-  msg <- paste0("Removing data based on [geo_scope] and [fips_co] columns (", Sys.time() , ")")
-  etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-  message(paste0('...', msg))
+  message(paste0('...', 
+                 etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id,
+                                 note = "Removing data based on [geo_scope] and [fips_co] columns",
+                                 full_note = F)))
   DBI::dbExecute(conn,glue::glue_sql(
     "DELETE FROM {`config$schema_name`}.{`config$table_name`}
     WHERE geo_scope <> 'wa' AND fips_co NOT IN(33, 53, 61)",
     .con = conn))
   
   ### FIX RACEMARS TO HAVE LEADING ZEROES ###
-  msg <- paste0("Fixing [racemars] column (", Sys.time() , ")")
-  etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-  message(paste0('...', msg))
+  message(paste0('...', 
+                 etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id,
+                                 note = "Fixing [racemars] column",
+                                 full_note = F)))
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE {`config$schema_name`}.{`config$table_name`}
     SET racemars = RIGHT('0000'+ CAST(racemars AS VARCHAR(5)), 5)
@@ -147,9 +155,10 @@ clean_raw_f <- function(
     .con = conn))
   
   ### FIX AGESTR ###
-  msg <- paste0("Fixing [agestr] column (", Sys.time() , ")")
-  etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-  message(paste0('...', msg))
+  message(paste0('...', 
+                 etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id,
+                                 note = "Fixing [agestr] column",
+                                 full_note = F)))
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE {`config$schema_name`}.{`config$table_name`}
     SET agestr = LEFT(agestr, 3)
@@ -157,9 +166,10 @@ clean_raw_f <- function(
     .con = conn))
   
   ### SET AGE ###
-  msg <- paste0("Setting [age] column (", Sys.time() , ")")
-  etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-  message(paste0('...', msg))
+  message(paste0('...', 
+                 etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id,
+                                 note = "Setting [age] column",
+                                 full_note = F)))
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE {`config$schema_name`}.{`config$table_name`}
     SET age = CAST(agestr AS SMALLINT)
@@ -167,9 +177,10 @@ clean_raw_f <- function(
     .con = conn))
   
   ### SET AGE11 USE REF.POP_CROSSWALK ###
-  msg <- paste0("Setting [age11] column (", Sys.time() , ")")
-  etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-  message(paste0('...', msg))
+  message(paste0('...', 
+                 etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id,
+                                 note = "Setting [age11] column",
+                                 full_note = F)))
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE R
     SET R.age11 = X.new_value_num
@@ -180,9 +191,10 @@ clean_raw_f <- function(
     .con = conn))
   
   ### SET AGE20 USE REF.POP_CROSSWALK###
-  msg <- paste0("Setting [age20] column (", Sys.time() , ")")
-  etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-  message(paste0('...', msg))
+  message(paste0('...', 
+                 etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id,
+                                 note = "Setting [age20] column",
+                                 full_note = F)))
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE R
     SET R.age20 = X.new_value_num
@@ -193,9 +205,10 @@ clean_raw_f <- function(
     .con = conn))
   
   ### SET S USE REF.POP_CROSSWALK ###
-  msg <- paste0("Setting [s] column (", Sys.time() , ")")
-  etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-  message(paste0('...', msg))
+  message(paste0('...', 
+                 etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id,
+                                 note = "Setting [s] column",
+                                 full_note = F)))
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE R
     SET R.s = X.new_value_num
@@ -205,9 +218,10 @@ clean_raw_f <- function(
     .con = conn))
   
   ### SET H USE REF.POP_CROSSWALK ###
-  msg <- paste0("Setting [h] column (", Sys.time() , ")")
-  etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-  message(paste0('...', msg))
+  message(paste0('...', 
+                 etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id,
+                                 note = "Setting [h] column",
+                                 full_note = F)))
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE R
     SET R.h = X.new_value_num
@@ -217,9 +231,10 @@ clean_raw_f <- function(
     .con = conn))
   
   ### SET RCODE USE REF.POP_CROSSWALK ###
-  msg <- paste0("Setting [rcode] column (", Sys.time() , ")")
-  etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-  message(paste0('...', msg))
+  message(paste0('...', 
+                 etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id,
+                                 note = "Setting [rcode] column",
+                                 full_note = F)))
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE R
     SET R.rcode = X.new_value_num
@@ -230,9 +245,10 @@ clean_raw_f <- function(
     .con = conn))
   
   ### SET R1_3 USE REF.POP_CROSSWALK ###
-  msg <- paste0("Setting [r1_3] column (", Sys.time() , ")")
-  etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-  message(paste0('...', msg))
+  message(paste0('...', 
+                 etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id,
+                                 note = "Setting [r1_3] column",
+                                 full_note = F)))
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE R
     SET R.r1_3 = X.new_value_num
@@ -243,9 +259,10 @@ clean_raw_f <- function(
     .con = conn))
   
   ### SET R2_4 USE REF.POP_CROSSWALK ###
-  msg <- paste0("Setting [r2_4] column (", Sys.time() , ")")
-  etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-  message(paste0('...', msg))
+  message(paste0('...', 
+                 etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id,
+                                 note = "Setting [r2_4] column",
+                                 full_note = F)))
   DBI::dbExecute(conn,glue::glue_sql(
     "UPDATE R
     SET R.r2_4 = X.new_value_num

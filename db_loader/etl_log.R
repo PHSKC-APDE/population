@@ -10,12 +10,14 @@ create_etl_log_f <- function(
   conn,
   config,
   batch_name,
+  batch_date,
   file_name,
   geo_type,
   geo_scope,
   geo_year,
   year,
-  r_type) {
+  r_type,
+  create_id = T) {
   
   ### SET DATABASE SETTINGS
   etl_schema <- "metadata"
@@ -48,12 +50,12 @@ create_etl_log_f <- function(
     etl_batch_id <- DBI::dbGetQuery(conn, sql_get)
   }
   
-  if (nrow(etl_batch_id) == 0) {
+  if (nrow(etl_batch_id) == 0 & create_id == T) {
     ### CREATE NEW ETL BATCH ID IF NEEDED
     sql_load <- glue::glue_sql(
       "INSERT INTO {`etl_schema`}.{`etl_table`} 
-      (batch_name, file_name, geo_type, geo_scope, geo_year, year, r_type) 
-      VALUES ({batch_name}, {file_name}, {geo_type}, {geo_scope}, 
+      (batch_name, batch_date, file_name, geo_type, geo_scope, geo_year, year, r_type) 
+      VALUES ({batch_name}, {batch_date}, {file_name}, {geo_type}, {geo_scope}, 
       {geo_year}, {year}, {r_type})", 
       .con = conn)
     DBI::dbGetQuery(conn, sql_load)
@@ -68,7 +70,7 @@ create_etl_log_f <- function(
       ORDER BY id DESC",
       .con = conn)
     etl_batch_id <- DBI::dbGetQuery(conn, sql_get)
-  }
+  } else if(nrow(etl_batch_id) == 0 & create_id == F) { etl_batch_id <- 0 }
   return(etl_batch_id)
 }
 
@@ -120,20 +122,50 @@ qa_etl_rows_f <- function(
 ### APPENDS NOTE TO THE ETL_NOTES FIELD
 etl_log_notes_f <- function(
   conn,
-  etl_batch_id,
-  note) {
+  etl_batch_id = 0,
+  batch_name = 0,
+  zip_name = 0,
+  file_name = 0,
+  note,
+  full_msg = T,
+  display_only = F) {
   
   ### SET DATABASE SETTINGS
   etl_schema <- "metadata"
   etl_table <- "pop_etl_log"
   
-  DBI::dbExecute(conn, glue::glue_sql(
-      "UPDATE {`etl_schema`}.{`etl_table`} 
-    SET etl_notes = CONCAT(etl_notes, {note}, ';'), last_update_datetime = GETDATE()
-    WHERE id = {etl_batch_id}", 
-      .con = conn))
+  note <- paste0(note, " (", Sys.time(), ")")
   
+  if (etl_batch_id > 0 & display_only == F) {
+    DBI::dbExecute(conn, glue::glue_sql(
+      "UPDATE {`etl_schema`}.{`etl_table`} 
+        SET etl_notes = CONCAT(etl_notes, {note}, ';'), 
+          last_update_datetime = GETDATE()
+        WHERE id = {etl_batch_id}", 
+      .con = conn))
+  }
+  msg <- ""
+  if(full_msg == T) {
+    if (etl_batch_id > 0) {
+      e <- DBI::dbGetQuery(conn, glue::glue_sql(
+        "SELECT batch_name, file_name 
+        FROM {`etl_schema`}.{`etl_table`} 
+        WHERE id = {etl_batch_id}",
+          .con = conn))
+      msg <- paste0(msg, 
+                  e$batch_name, " - ",
+                  e$file_name, " - ",
+                  etl_batch_id, ": ",)
+    } else {
+      if (batch_name != 0) { msg <- paste0(msg, batch_name) }
+      if (zip_name != 0) { msg <- paste0(msg, " - ", zip_name) }
+      if (file_name == 0) { msg <- paste0(msg, ": ")
+      } else { msg <- paste0(msg, " - ", file_name, ": ") }
+    }
+  } 
+  msg <- paste0(msg, note)
   ### This delay is to help order the notes in queries
   Sys.sleep(1)
+  return(msg)
 }
   

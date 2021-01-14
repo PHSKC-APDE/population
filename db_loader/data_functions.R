@@ -13,6 +13,9 @@ load_data_f <- function(
   path_tmp,
   path_tmptxt,
   f_load) {
+  # Set path for 7-zip
+  old_path <- Sys.getenv("PATH")
+  Sys.setenv(PATH = paste(old_path, "C:\\ProgramData\\Microsoft\\AppV\\Client\\Integration\\562FBB69-6389-4697-9A54-9FF814E30039\\Root\\VFS\\ProgramFilesX64\\7-Zip", sep = ";"))
   ### Create list of zip files with csvs in raw data folder
   zipped_files <- as.data.frame(list.files(paste0(path_raw, "/", f_load, "/files_to_load"), pattern = "\\.zip$", ignore.case = T))
   colnames(zipped_files)[1] = "filename"
@@ -20,29 +23,53 @@ load_data_f <- function(
   stime <- Sys.time()
   ### Begin loop to extract data to tmp folder, archive old sql tables, 
   ### prep new sql tables, insert data to sql, and remove tmp data - one zip file at a time
-  message(paste0(f_load, ": Loading data from folder (", Sys.time() , ")"))
+  message(etl_log_notes_f(conn = conn, 
+                          batch_name = f_load,
+                          note = "Loading data from folder",
+                          full_note = F))
+  
   for (z in 1:nrow(zipped_files)) {
     ### Clean out temp folder
     file.remove(list.files(path_tmp, include.dirs = F, full.names = T, recursive = T))
     ### Get list of files in the zip file
-    message(paste0(f_load, " - ", zipped_files[z,], ": Reviewing files in zip"))
+    message(etl_log_notes_f(conn = conn, 
+                            batch_name = f_load,
+                            zip_name = zipped_files[z,],
+                            note = "Reviewing files in zip",
+                            full_note = F))
     files_in_zip <- utils::unzip(paste0(path_raw, "/", f_load, "/files_to_load/", zipped_files[z,]), list = TRUE)
     files_to_unzip <- c()
     ### Make a list of files that have not already been loaded for this batch
+    if(!is.na(as.numeric(substr(f_load,5,6)))) { 
+      f_load_date <- paste0(substr(f_load,1,4), "-",
+                            substr(f_load,5,6), "-",
+                            substr(f_load,7,8)) 
+    } else { 
+      f_load_date <- paste0(substr(f_load,1,4), "-01-01") 
+    }
     for(u in 1:nrow(files_in_zip)) {
       file_info <- get_raw_file_info_f(config = pop_config, file_name = files_in_zip[u,]$Name)
+      if (file_info$geo_type %in% in_geo_types == FALSE) { next }
       etl_batch_id <- create_etl_log_f(conn = conn, config = pop_config, 
-                                       batch_name = f_load, file_name = files_in_zip[u,]$Name, 
-                                       geo_type = file_info$geo_type, geo_scope = file_info$geo_scope,
-                                       geo_year = file_info$geo_year, year = file_info$year, 
-                                       r_type = file_info$r_type)
-      if (etl_batch_id > 0) {
+                                       batch_name = f_load, 
+                                       batch_date = f_load_date, 
+                                       file_name = files_in_zip[u,]$Name, 
+                                       geo_type = file_info$geo_type, 
+                                       geo_scope = file_info$geo_scope,
+                                       geo_year = file_info$geo_year, 
+                                       year = file_info$year, 
+                                       r_type = file_info$r_type, create_id = F)
+      if (etl_batch_id >= 0) {
         files_to_unzip <- c(files_to_unzip, files_in_zip[u,]$Name)
       }
     }
     ### Run if there are files to process
     if (length(files_to_unzip) > 0) {
-      message(paste0(f_load, " - ", zipped_files[z,], ": Unzipping files (", Sys.time() , ")"))
+      message(etl_log_notes_f(conn = conn, 
+                              batch_name = f_load,
+                              zip_name = zipped_files[z,],
+                              note = "Unzipping files",
+                              full_note = F))
       # Unzip zip file to the tmp folder
       z_args <- c(glue(' e "{paste0(path_raw, "/", f_load, "/files_to_load/", zipped_files[z,])}"', 
                        ' -o"{path_tmp}"', 
@@ -54,29 +81,37 @@ load_data_f <- function(
       # Look at one unzipped file at a time
       for (y in 1:nrow(unzipped_files)) {
         # Use file name to determine other elements of the data and add to data frame
-        message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], ": Reviewing file name (", Sys.time() , ")"))
+        message(etl_log_notes_f(conn = conn, 
+                                batch_name = f_load,
+                                zip_name = zipped_files[z,],
+                                file_name = unzipped_files[y,],
+                                note = "Reviewing file name",
+                                full_note = F))
         file_info <- get_raw_file_info_f(config = pop_config, file_name = unzipped_files[y,])
-        etl_batch_id <- create_etl_log_f(conn = conn, config = pop_config, 
-                                        batch_name = f_load, file_name = unzipped_files[y,], 
-                                        geo_type = file_info$geo_type, geo_scope = file_info$geo_scope,
-                                        geo_year = file_info$geo_year, year = file_info$year, 
-                                        r_type = file_info$r_type)
-        ###
-        in_geo_types <- c("zip")
-        ex_geo_types <- c("blkg", "lgd", "ste", "trc")
         if (file_info$geo_type %in% in_geo_types == FALSE) { next }
-        ###
+        etl_batch_id <- create_etl_log_f(conn = conn, config = pop_config, 
+                                         batch_name = f_load, 
+                                         batch_date = f_load_date, 
+                                         file_name = files_in_zip[u,]$Name, 
+                                         geo_type = file_info$geo_type, 
+                                         geo_scope = file_info$geo_scope,
+                                         geo_year = file_info$geo_year, 
+                                         year = file_info$year, 
+                                         r_type = file_info$r_type)
         if (etl_batch_id < 0) {
-          message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id * -1, ": Already loaded to ref.pop (", Sys.time() , ")"))
+          message(etl_log_notes_f(conn = conn, 
+                                  etl_batch_id = etl_batch_id * -1,
+                                  note = "Already loaded to ref.pop",
+                                  display_only = T))
         }
         else {
-          msg <- paste0("ETL Batch ID (", Sys.time() , ")")
-          etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-          message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, ": ", msg))
+          message(etl_log_notes_f(conn = conn, 
+                                  etl_batch_id = etl_batch_id,
+                                  note = "ETL Batch ID"))
           # Read csv into a data frame
-          msg <- paste0("Reading data from file (", Sys.time() , ")")
-          etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-          message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, ": ", msg))
+          message(etl_log_notes_f(conn = conn, 
+                                  etl_batch_id = etl_batch_id,
+                                  note = "Reading data from file"))
           data <- read.csv(paste0(path_tmp, "/", unzipped_files[y,]))
           # Change names of columns
           colnames(data) <- lapply(colnames(data), tolower)
@@ -104,118 +139,97 @@ load_data_f <- function(
           ### Check if data has tried to load and how many rows were loaded
           data_start <- failed_raw_load_f(conn = conn, config = raw_config, 
                                         etl_batch_id = etl_batch_id)
-          ### Remove rows from dataframe that have already been loaded to raw
-          if(nrow(data_start) > 0) {
-            data_start <- data_start[1,2]
-            msg <- paste0("Loading data into raw that previously failed. Picking up at row ", data_start + 1, " (", Sys.time() , ")")
-            etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-            message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, ": ", msg))
-            if (data_start > 0) {
-              data <- data[-(1:data_start),]
-              retry <- T
+          if(nrow(data) == data_start) {
+            message(etl_log_notes_f(conn = conn, 
+                                    etl_batch_id = etl_batch_id,
+                                    note = "Raw data already loaded"))
+          } else {
+            if(nrow(data_start) > 0) {
+              ### Remove rows from dataframe that have already been loaded to raw
+              data_start <- data_start[1,2]
+              message(etl_log_notes_f(conn = conn, 
+                                      etl_batch_id = etl_batch_id,
+                                      note = paste0("Loading data into raw that previously failed. Picking up at row ", data_start + 1)))
+              if (data_start > 0) {
+                data <- data[-(1:data_start),]
+                retry <- T
+              }
+              else {
+                retry <- F
+              }
             }
             else {
+              data_start = 0
               retry <- F
             }
-          }
-          else {
-            data_start = 0
-            retry <- F
-          }
-          ### Load raw data to sql
-          msg <- paste0("Loading raw data (", Sys.time() , ")")
-          etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-          message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, ": ", msg))
-          qa_rows_sql <- load_raw_f(conn = conn, config = raw_config, 
+            ### Load raw data to sql
+            message(etl_log_notes_f(conn = conn, 
+                                    etl_batch_id = etl_batch_id,
+                                    note = "Loading raw data"))
+            qa_rows_sql <- load_raw_f(conn = conn, config = raw_config, 
                                   path_tmp = path_tmp, path_tmptxt = path_tmptxt,
                                   data = data, etl_batch_id = etl_batch_id,
                                   retry = retry, write_local = T)
-          ### Record number of rows loaded to raw
-          qa_rows_results <- qa_etl_rows_f(conn = conn, config = pop_config,
+            ### Record number of rows loaded to raw
+            qa_rows_results <- qa_etl_rows_f(conn = conn, config = pop_config,
                                         rows_sql = qa_rows_sql + data_start, "qa_rows_load")
-          msg <- paste0("Raw data loaded (", Sys.time() , ")")
-          etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-          message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, ": ", msg))
-          ### Clean raw data and add columns
-          msg <- paste0("Cleaning raw data (", Sys.time() , ")")
-          etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-          message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, ": ", msg))
-          clean_raw_f(conn = conn, config = raw_config, etl_batch_id = etl_batch_id)
-          msg <- paste0("Raw data cleaned (", Sys.time() , ")")
-          etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-          message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, ": ", msg))
-          ### Determine if there is old data in ref that needs to be archived
-          to_archive <- DBI::dbGetQuery(conn, glue::glue_sql(
-            "SELECT A.id AS etl_batch_id
-            FROM metadata.pop_etl_log A
-            INNER JOIN [PH_APDEStore].[metadata].[pop_etl_log] R ON
-  	          R.geo_type = A.geo_type AND ISNULL(R.geo_scope, 0) = ISNULL(A.geo_scope, 0)
-	            AND R.geo_year = A.geo_year AND R.year = A.year AND R.r_type = A.r_type
-            WHERE R.id = {etl_batch_id} AND A.id <> R.id AND A.load_archive_datetime IS NULL",
-            .con = conn))
-          ### Archive the old data and remove from ref
-          if (nrow(to_archive) > 0) {
-            for (a in 1:nrow(to_archive)) {
-              msg <- paste0("Begin archiving old data from ETL Batch ID ", to_archive[a,1], " (", Sys.time() , ")")
-              etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-              message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, ": ", msg))
-              msg <- paste0("Moving old data from ref to archive for ETL Batch ID ", etl_batch_id, " (", Sys.time() , ")")
-              etl_log_notes_f(conn = conn, etl_batch_id = to_archive[a,1], note = msg)
-              message(paste0("ETL Batch ID - ", to_archive[a,1], ": ", msg))
-              data_move_f(conn, pop_config$archive_schema, pop_config$ref_schema, pop_config$table_name, to_archive[a,1], T)
-              update_etl_log_datetime_f(
-                conn = conn, 
-                etl_batch_id = to_archive[a, 1],
-                field = "load_archive_datetime")
-              msg <- paste0("Old data loaded to archive (", Sys.time() , ")")
-              etl_log_notes_f(conn = conn, etl_batch_id = to_archive[a,1], note = msg)
-              message(paste0("ETL Batch ID - ", to_archive[a,1], ": ", msg))
-              update_etl_log_datetime_f(
-                conn = conn, 
-                etl_batch_id = to_archive[a, 1],
-                field = "delete_ref_datetime")
-              msg <- paste0("Old data deleted from ref (", Sys.time() , ")")
-              etl_log_notes_f(conn = conn, etl_batch_id = to_archive[a,1], note = msg)
-              message(paste0("ETL Batch ID - ", to_archive[a,1], ": ", msg))
-              msg <- paste0("Archiving old data from ETL Batch ID ", to_archive[a,1], " complete (", Sys.time() , ")")
-              etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-              message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, ": ", msg))
-            }
+            message(etl_log_notes_f(conn = conn, 
+                                    etl_batch_id = etl_batch_id,
+                                    note = "Raw data loaded"))
           }
+          ### Clean raw data and add columns
+          message(etl_log_notes_f(conn = conn, 
+                                  etl_batch_id = etl_batch_id,
+                                  note = "Cleaning raw data"))
+          clean_raw_f(conn = conn, config = raw_config, etl_batch_id = etl_batch_id)
+          message(etl_log_notes_f(conn = conn, 
+                                  etl_batch_id = etl_batch_id,
+                                  note = "Raw data cleaned"))
+          ### Check for old data and move it from ref to archive
+          load_archive_f(conn = conn, config = pop_config)
           ### Move data from raw to ref
-          msg <- paste0("Moving new data from raw to ref (", Sys.time() , ")")
-          etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-          message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, ": ", msg))
+          message(etl_log_notes_f(conn = conn, 
+                                  etl_batch_id = etl_batch_id,
+                                  note = "Moving new, cleaned data from raw to ref"))
           data_move_f(conn, pop_config$ref_schema, pop_config$raw_schema, pop_config$table_name, etl_batch_id)
           update_etl_log_datetime_f(
             conn = conn, 
             etl_batch_id = etl_batch_id,
             field = "load_ref_datetime")
-          msg <- paste0("New data loaded to ref (", Sys.time() , ")")
-          etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-          message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, ": ", msg))
+          message(etl_log_notes_f(conn = conn, 
+                                  etl_batch_id = etl_batch_id,
+                                  note = "New data loaded to ref"))
           update_etl_log_datetime_f(
             conn = conn, 
             etl_batch_id = etl_batch_id,
             field = "delete_raw_datetime")
-          msg <- paste0("Raw data deleted (", Sys.time() , ")")
-          etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-          message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, ": ", msg))
+          message(etl_log_notes_f(conn = conn, 
+                                  etl_batch_id = etl_batch_id,
+                                  note = "Raw data deleted"))
+          ### Check if new data is not the latest data and move it from ref to archive
+          load_archive_f(conn = conn, config = pop_config)
           ### File has been processed
-          msg <- paste0("Data has been processed (", Sys.time() , ")")
-          etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id, note = msg)
-          message(paste0(f_load, " - ", zipped_files[z,], " - ", unzipped_files[y,], " - ", etl_batch_id, ": ", msg))
+          message(etl_log_notes_f(conn = conn, 
+                                  etl_batch_id = etl_batch_id,
+                                  note = "Data has been processed"))
         }
       }
       ### Empty tmp folder of csv files
       file.remove(list.files(path_tmp, include.dirs = F, full.names = T, recursive = T))
       message(paste0(f_load, " - ", zipped_files[z,], ": Data has been processed (", Sys.time() , ")"))
+      message(etl_log_notes_f(conn = conn, batch_name =  f_load,
+                              zip_name = zipped_files[z,],
+                              note = "Data has been processed"))
     } else {
-      message(paste0(f_load, " - ", zipped_files[z,], ": All data has been previously processed (", Sys.time() , ")"))
+      message(etl_log_notes_f(conn = conn, batch_name =  f_load,
+                              zip_name = zipped_files[z,],
+                              note = "All data has been previously processe"))
     }
   }
   etime <- Sys.time()
-  message(paste0(f_load, ": Batch load complete - ", etime - stime,  " (", Sys.time() , ")"))
+  drop_table_f(conn = conn, schema = pop_config$raw_schema, table = pop_config$table_name)
+  message(etl_log_notes_f(conn = conn, batch_name = f_load,
+                          note = paste0("Batch load complete - ", etime - stime)))
   ### Return TRUE if process completed fully, else the function will loop and try again
   return(T)
 }
@@ -292,7 +306,7 @@ select_process_data_f <- function(){
                            print(paste0("ERROR: ",err))
                          })
     trynum <- trynum + 1
-    if (complete == T | trynum > 10) { break }
+    if (complete == T | trynum > 2) { break }
   }
   ### ADD INDEX TO REF
   #add_index_f(conn = conn, schema = pop_config$ref_schema, 
