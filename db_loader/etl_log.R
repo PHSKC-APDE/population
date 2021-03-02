@@ -8,7 +8,6 @@
 #### FUNCTION CREATE ETL LOG ####
 create_etl_log_f <- function(
   conn,
-  config,
   batch_name,
   batch_date,
   file_name,
@@ -46,6 +45,19 @@ create_etl_log_f <- function(
       AND geo_year = {geo_year} AND year = {year} AND r_type = {r_type}
       AND load_raw_datetime IS NOT NULL AND load_ref_datetime IS NOT NULL
       ORDER BY id DESC",
+      .con = conn)
+    etl_batch_id <- DBI::dbGetQuery(conn, sql_get)
+  }
+  
+  if (nrow(etl_batch_id) == 0) {
+    sql_get <- glue::glue_sql(
+      "SELECT TOP (1) -999 FROM [metadata].[pop_etl_log]
+      WHERE [load_archive_datetime] IS NOT NULL 
+        AND [delete_archive_datetime] IS NULL
+        AND [geo_type] = {geo_type} AND [geo_scope] = {geo_scope} 
+        AND [geo_year] = {geo_year} AND [year] = {year} AND [r_type] = {r_type}
+      GROUP BY [geo_type], [geo_scope], [geo_year], [year], [r_type]
+      HAVING COUNT(id) >= 2 AND MIN([batch_date]) > {batch_date}",
       .con = conn)
     etl_batch_id <- DBI::dbGetQuery(conn, sql_get)
   }
@@ -91,29 +103,27 @@ update_etl_log_datetime_f <- function(
     .con = conn))
 }
 
-#### QA SQL ROWS IN ETL LOG ####
-qa_etl_rows_f <- function(
+#### QA SQL ROWS/POP IN ETL LOG ####
+qa_etl_f <- function(
   conn,
-  config,
-  rows_sql,
-  field) {
+  etl_batch_id,
+  qa_val = 0,
+  field = 0) {
   
   ### SET DATABASE SETTINGS
   etl_schema <- "metadata"
   etl_table <- "pop_etl_log"
   
-  for(i in 1:nrow(rows_sql)) {
+  if(field != 0) {
     DBI::dbExecute(conn, glue::glue_sql(
     "UPDATE {`etl_schema`}.{`etl_table`} 
-    SET {`field`} = {rows_sql[i,2]} 
-    WHERE id = {rows_sql[i,1]}", 
+    SET {`field`} = {qa_val} 
+    WHERE id = {etl_batch_id}", 
     .con = conn))
   }
-  
   sql_get <- glue::glue_sql(
-    "SELECT id, qa_rows_file, qa_rows_load FROM {`etl_schema`}.{`etl_table`} 
-      WHERE qa_rows_file <> qa_rows_load
-      ORDER BY id ASC",
+    "SELECT id, qa_rows_file, qa_rows_load, qa_rows_kept, qa_pop_load, qa_pop_kept FROM {`etl_schema`}.{`etl_table`} 
+      WHERE id = {etl_batch_id}",
     .con = conn)
   qa_results <- DBI::dbGetQuery(conn, sql_get)
   return(qa_results)
@@ -122,18 +132,18 @@ qa_etl_rows_f <- function(
 ### APPENDS NOTE TO THE ETL_NOTES FIELD
 etl_log_notes_f <- function(
   conn,
+  note,
   etl_batch_id = 0,
   batch_name = 0,
   zip_name = 0,
   file_name = 0,
-  note,
   full_msg = T,
   display_only = F) {
   
   ### SET DATABASE SETTINGS
   etl_schema <- "metadata"
   etl_table <- "pop_etl_log"
-  
+
   note <- paste0(note, " (", Sys.time(), ")")
   
   if (etl_batch_id > 0 & display_only == F) {
@@ -148,14 +158,14 @@ etl_log_notes_f <- function(
   if(full_msg == T) {
     if (etl_batch_id > 0) {
       e <- DBI::dbGetQuery(conn, glue::glue_sql(
-        "SELECT batch_name, file_name 
+        "SELECT id, batch_name, file_name 
         FROM {`etl_schema`}.{`etl_table`} 
         WHERE id = {etl_batch_id}",
           .con = conn))
       msg <- paste0(msg, 
                   e$batch_name, " - ",
                   e$file_name, " - ",
-                  etl_batch_id, ": ",)
+                  e$id, ": ")
     } else {
       if (batch_name != 0) { msg <- paste0(msg, batch_name) }
       if (zip_name != 0) { msg <- paste0(msg, " - ", zip_name) }

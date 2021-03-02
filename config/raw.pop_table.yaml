@@ -3,6 +3,7 @@ table_name: pop
 field_term: \t
 row_term: \n
 vars:
+  id: INTEGER
   etl_batch_id: INTEGER
   year: VARCHAR(4)
   geo_id: VARCHAR(15)
@@ -25,4 +26,3 @@ vars_add:
   r2_4: SMALLINT
   rcode: SMALLINT
   fips_co: SMALLINT
-  
