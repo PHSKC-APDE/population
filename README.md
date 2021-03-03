@@ -30,9 +30,19 @@ The pop_etl_log.sql file has a number of queries to help review the data process
 ## R Package Instructions
 1. Review the config/common.pop.yaml file. Set the path_tmp to a local or network temporary folder (local is typically faster). This folder will be used to unzip the files and temporarily store the .csv files.
 2. Open the main_etl.R file. Set the in_geo_types list to determine which geo_types the script will load. Set the min_year variable to determine the earliest year's data that will be loaded.
-3. Run all (CTRL+ALT+R)
+3. Run all (CTRL+ALT+R).
 
 ## R Package Process
-1. A list of zipped files is created
-2. The contents of the first zipped file is reviewed. This determines what files have not already been loaded into the database
-
+1. Select which batch folder to apply the R script.
+2. A list of zipped files in the batch folder is created.
+3. The contents of the first zipped file is reviewed. This determines what files have not already been loaded into the database and meet the in_geo_types and min_year requirements. This also checks if this is one of the 3 newest versions of each file to determine if the data needs to be loaded to ref or archive or skipped altogether.
+4. Unzip the qualifying csv files into the temporary folder.
+5. Read the data from the first. Give this file an etl id (entry into metadata.pop_etl_log) if it does not have one already. 
+6. Pull the data from the first file into a data.frame. Update column names, add new columns and reorder columns to match raw table layout.
+7. Determine if there was a previous attempt to load the file into the raw table and truncate the data.frame to pick up where the loading process left off.
+8. Load the data.frame into raw.pop or raw77.pop based on r_type.
+9. Clean up the data, fill in extra columns based on ref.pop_crosswalk and remove data that is outside the geo_scope.
+10. Determine if the data is not the newest version. If data is the newest version, move it to ref.pop or ref.pop77, else, move the data directly to archive.pop or archive.pop77.
+11. If there is now older data in the ref tables, move that data to the corresponding archive table.
+12. Repeat with each csv file in the tmp folder.
+13. Repeat with each zip file in the batch folder.
