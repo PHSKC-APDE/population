@@ -76,8 +76,8 @@ load_data_f <- function(
       unzipped_files <- as.data.frame(list.files(path_tmp, pattern = "\\.csv$", ignore.case = T))
       # Look at one unzipped file at a time
       for (y in 1:nrow(unzipped_files)) {
-        pop_config <- yaml::read_yaml("C:/Users/jwhitehurst/OneDrive - King County/GitHub/Population/config/common.pop.yaml")
-        raw_config <- yaml::read_yaml("C:/Users/jwhitehurst/OneDrive - King County/GitHub/Population/config/raw.pop_table.yaml")
+        pop_config <- yaml::yaml.load(httr::GET("https://raw.githubusercontent.com/PHSKC-APDE/population/master/config/common.pop.yaml"))
+        raw_config <- yaml::yaml.load(httr::GET("https://raw.githubusercontent.com/PHSKC-APDE/population/master/config/raw.pop_table.yaml"))
         # Use file name to determine other elements of the data and add to data frame
         message(etl_log_notes_f(conn = conn, 
                                 batch_name = f_load,
