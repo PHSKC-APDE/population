@@ -74,8 +74,8 @@ R Libraries:
 - survPen
 - reticulate
 
-Extra Software:
-- 7-Zip: needed for zip file compatibility (some of the zip files are compressed in a way that the Windows' nor R's built-in zip functionality can handle).
+Other Requirements:
+- 7-Zip is needed for zip file compatibility (some of the zip files are compressed in a way that the Windows' nor R's built-in zip functionality can handle).
 - SQL Server ODBC Drive is updated.
 - Path has been properly set for BCP commands to function properly.
 - Path has been properly set for 7-Zip commands to function properly (the path should set itself in the data_functions.R file, at the beginning of load_data_f.
