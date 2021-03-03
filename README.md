@@ -46,3 +46,39 @@ The pop_etl_log.sql file has a number of queries to help review the data process
 11. If there is now older data in the ref tables, move that data to the corresponding archive table.
 12. Repeat with each csv file in the tmp folder.
 13. Repeat with each zip file in the batch folder.
+
+## ETL Folder Access, Credentials and Other Requirements
+Folder access:
+- \\phdata01\DROF_DATA\DOH DATA\POP\data\raw
+
+SQL Database Access:
+ - KCITSQLUTPDBH51
+   - KCIT SQL Server (local)
+   - Windows Authentication
+   - ODBC - User DSN - SQL Server - /w Windows NT authentication - PH_APDEStore51
+   - Access to archive, raw and ref schema
+
+SFTP Credentials:
+- https://sft.wa.gov/ 
+  - typically included in email sent by OFM
+
+R Libraries:
+- odbc
+- tidyverse
+- lubridate
+- glue
+- configr
+- sf
+- utils
+- dplyr
+- survPen
+- reticulate
+
+Extra Software:
+- 7-Zip: needed for zip file compatibility (some of the zip files are compressed in a way that the Windows' nor R's built-in zip functionality can handle).
+- SQL Server ODBC Drive is updated.
+- Path has been properly set for BCP commands to function properly.
+- Path has been properly set for 7-Zip commands to function properly (the path should set itself in the data_functions.R file, at the beginning of load_data_f.
+
+## QA
+In progress...
