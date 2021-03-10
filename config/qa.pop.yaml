@@ -1,0 +1,16 @@
+schema_name: ref
+table_name: pop_qa
+vars:
+  geo_type: VARCHAR(5)
+  geo_scope: VARCHAR(4)
+  geo_year: VARCHAR(4)
+  r_type: SMALLINT
+  year: VARCHAR(4)
+  col: VARCHAR(10)
+  val: VARCHAR(4)
+  pop: FLOAT
+cols:
+  age: age
+  gender: s
+  race_eth: r2_4
+  

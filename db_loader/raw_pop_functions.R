@@ -502,7 +502,7 @@ get_raw_file_info_f <- function(
   return(data.frame(geo_type, geo_scope, geo_year, year, r_type))
 }
 
-### FUNCTION TO DETERMINE HOW MANY ROWS HAVE BEEN LOADED TO RAW WHEN LOAD FAILS
+#### FUNCTION TO DETERMINE HOW MANY ROWS HAVE BEEN LOADED TO RAW WHEN LOAD FAILS ####
 failed_raw_load_f <- function(
   conn,
   schema_name,
@@ -522,7 +522,7 @@ failed_raw_load_f <- function(
   return(rows_loaded)
 }
 
-### FUNCTION TO IF ALL OF RAW DATA WAS CLEANED
+#### FUNCTION TO IF ALL OF RAW DATA WAS CLEANED ####
 clean_raw_check_f <- function(
   conn,
   schema_name,
