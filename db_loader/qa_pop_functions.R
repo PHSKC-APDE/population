@@ -80,9 +80,44 @@ select_qa_data_f <- function(){
 
 create_qa_pop_f <- function(conn){
   qa_config <- yaml::yaml.load(httr::GET("https://raw.githubusercontent.com/PHSKC-APDE/population/master/config/qa.pop.yaml"))
-  create_table_f(conn = conn, schema = qa_config$schema_name, 
-                 table = qa_config$table_name, vars = qa_config$vars,
+  schema_name <- qa_config$schema_name
+  qa_table <-  qa_config$table_name
+  ref_table <- substring(table_name, 1, 3)
+  ref_table77 <- paste0(ref_table, "77")
+  vars <- qa_config$vars
+  sel_vars <- vars[1:5]
+  cols <- qa_config$cols
+  create_table_f(conn = conn, schema = schema_name, 
+                 table = qa_table, vars = vars,
                  overwrite = T)
-  
-  
+  for (c in 1:nrow(cols)) {
+    insert_code <- glue::glue_sql(
+      "INSERT INTO {`schema_name`}.{`qa_table`} 
+      ({DBI::SQL(glue::glue_collapse(glue::glue_sql('{`names(vars)`}', 
+      .con = conn), sep = ', '))}) 
+      SELECT 
+      {DBI::SQL(glue::glue_collapse(glue::glue_sql('{`names(sel_vars)`}', 
+      .con = conn), sep = ', '))}, 
+      {cols[c]}, {`cols[[c]]`}, SUM(\"pop\")
+      FROM {`schema_name`}.{`ref_table`}
+      GROUP BY
+      {DBI::SQL(glue::glue_collapse(glue::glue_sql('{`names(sel_vars)`}', 
+      .con = conn), sep = ', '))}, {`cols[[c]]`}
+      ", .con = conn)
+    DBI::dbExecute(conn, insert_code)
+    insert_code <- glue::glue_sql(
+      "INSERT INTO {`schema_name`}.{`qa_table`} 
+      ({DBI::SQL(glue::glue_collapse(glue::glue_sql('{`names(vars)`}', 
+      .con = conn), sep = ', '))}) 
+      SELECT 
+      {DBI::SQL(glue::glue_collapse(glue::glue_sql('{`names(sel_vars)`}', 
+      .con = conn), sep = ', '))}, 
+      {cols[c]}, {`cols[[c]]`}, SUM(\"pop\")
+      FROM {`schema_name`}.{`ref_table77`}
+      GROUP BY
+      {DBI::SQL(glue::glue_collapse(glue::glue_sql('{`names(sel_vars)`}', 
+      .con = conn), sep = ', '))}, {`cols[[c]]`}
+      ", .con = conn)
+    DBI::dbExecute(conn, insert_code)
+  }
 }

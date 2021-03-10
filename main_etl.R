@@ -23,6 +23,7 @@ devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/ma
 devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/master/db_loader/table_functions.R")
 devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/master/db_loader/data_functions.R")
 devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/master/db_loader/raw_pop_functions.R")
+devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/master/db_loader/qa_pop_functions.R")
 devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/master/db_loader/archive_pop_functions.R")
 
 ### Set SQL Connections
@@ -34,12 +35,13 @@ path_raw <- config[["path_raw"]]
 path_tmp <-  config[["path_tmp"]]
 path_tmptxt <-  paste0(path_raw, "/tmp")
 in_geo_types <- c("blk","scd","zip") # c("blk", "blkg", "cou", "lgd", "scd", "ste", "trc", "zip")
-in_geo_typs <- c("zip")
-min_year <- 2000
+in_geo_types <- c("zip")
+min_year <- 2019
 
 # Select the folder to process and run the data processing functions
 select_qa_data_f()
 select_process_data_f()
+create_qa_pop_f(conn)
 
 warnings()
 
