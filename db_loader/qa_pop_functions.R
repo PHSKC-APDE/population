@@ -82,7 +82,7 @@ create_qa_pop_f <- function(conn){
   qa_config <- yaml::yaml.load(httr::GET("https://raw.githubusercontent.com/PHSKC-APDE/population/master/config/qa.pop.yaml"))
   schema_name <- qa_config$schema_name
   qa_table <-  qa_config$table_name
-  ref_table <- substring(table_name, 1, 3)
+  ref_table <- substring(qa_table, 1, 3)
   ref_table77 <- paste0(ref_table, "77")
   vars <- qa_config$vars
   sel_vars <- vars[1:5]
