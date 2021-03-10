@@ -1,5 +1,6 @@
 schema_name: ref
 table_name: pop_qa
+crosswalk: pop_crosswalk
 vars:
   geo_type: VARCHAR(5)
   geo_scope: VARCHAR(4)

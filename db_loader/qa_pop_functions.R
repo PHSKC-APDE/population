@@ -1,6 +1,7 @@
 
 ### FUNCTION TO SELECT BATCH AND START THE QA PROCESS
 select_qa_data_f <- function(){
+  qa_config <- yaml::yaml.load(httr::GET("https://raw.githubusercontent.com/PHSKC-APDE/population/master/config/qa.pop.yaml"))
   # List of folders that have raw data
   f_list <- list.dirs(path = path_raw, full.names = F, recursive = F)
   f_list <- f_list[ f_list != "tmp"]
@@ -17,7 +18,9 @@ select_qa_data_f <- function(){
   zipped_files <- as.data.frame(zipped_files[grepl("csv", zipped_files$filename, ignore.case = T), ])
   files <- data.frame(matrix(ncol = 6, nrow = 0))
   colnames(files) <- c("file_name", "geo_type", "geo_scope", "geo_year", "year", "r_type")
-  
+  crosswalk <- DBI:dbGetQuery(conn, glue::glue_sql(
+    "SELECT * FROM {`qa_config$schema_name`}.{`qa_config$crosswalk`}",
+    .con = conn))
   
   for (z in 1:nrow(zipped_files)) {
     ### Clean out temp folder
@@ -43,17 +46,17 @@ select_qa_data_f <- function(){
                        ' -y',
                        ' "{glue_collapse(files_to_unzip, sep = \'" "\')}"'))
       system2(command = "7z", args = c(z_args))
+      
       # Get a list of the unzipped files
       unzipped_files <- as.data.frame(list.files(path_tmp, pattern = "\\.csv$", ignore.case = T))
       # Look at one unzipped file at a time
+      y <- 1
       for (y in 1:nrow(unzipped_files)) {
         pop_config <- yaml::yaml.load(httr::GET("https://raw.githubusercontent.com/PHSKC-APDE/population/master/config/common.pop.yaml"))
+        
         # Use file name to determine other elements of the data and add to data frame
         file_info <- get_raw_file_info_f(config = pop_config, file_name = unzipped_files[y,])
-        table_name = pop_config$table_name
-        if(file_info$r_type == 77) { 
-          table_name <- paste0(table_name, "77")
-        }
+        
         data <- read.csv(paste0(path_tmp, "/", unzipped_files[y,]))
         # Change names of columns
         colnames(data) <- lapply(colnames(data), tolower)
@@ -71,6 +74,8 @@ select_qa_data_f <- function(){
           }
         }
         data <- data[, c("year", "geo_id", "racemars", "gender", "agestr", "hispanic", "pop")]
+        data$age <- with(data, as.numeric(substring(agestr, 1, 3)))
+        
       }
       ### Empty tmp folder of csv files
       #file.remove(list.files(path_tmp, include.dirs = F, full.names = T, recursive = T))
@@ -90,7 +95,7 @@ create_qa_pop_f <- function(conn){
   create_table_f(conn = conn, schema = schema_name, 
                  table = qa_table, vars = vars,
                  overwrite = T)
-  for (c in 1:nrow(cols)) {
+  for (c in 1:length(cols)) {
     insert_code <- glue::glue_sql(
       "INSERT INTO {`schema_name`}.{`qa_table`} 
       ({DBI::SQL(glue::glue_collapse(glue::glue_sql('{`names(vars)`}', 
@@ -120,4 +125,5 @@ create_qa_pop_f <- function(conn){
       ", .con = conn)
     DBI::dbExecute(conn, insert_code)
   }
+  rm(qa_config, schema_name, qa_table, ref_table, ref_table77, vars, sel_vars, cols, insert_code, c)
 }
