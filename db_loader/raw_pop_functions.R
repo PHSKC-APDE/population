@@ -126,6 +126,11 @@ clean_raw_r_f <- function(
   } else {
     df$fips_co <- NA
   }
+  ### SET COLUMNS BASED ON FILE INFO ###
+  df$geo_type <- info$geo_type
+  df$geo_scope <- info$geo_scope
+  df$geo_year <- info$geo_year
+  df$r_type <- info$r_type
   ### FIX RACEMARS TO HAVE LEADING ZEROES ###
   df$racemars <- as.character(df$racemars)
   if(info$r_type == 97) {
