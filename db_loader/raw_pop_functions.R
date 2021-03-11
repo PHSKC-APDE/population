@@ -117,7 +117,6 @@ clean_raw_r_f <- function(
       colnames(df)[x] = "geo_id"
     }
   }
-  df <- df[, c("year", "geo_id", "racemars", "gender", "agestr", "hispanic", "pop")]
   ### SET FIPS_CO COLUMN AND REMOVE DATA BASED ON GEO_SCOPE ###
   df$geo_id <- as.character(df$geo_id)
   if(info$geo_scope == "kps") {
@@ -208,7 +207,7 @@ clean_raw_r_f <- function(
   df$r2_4 <- ifelse(is.na(df$r2_4), df$r, df$r2_4)
   df <- select(df, -r)
   ### ORDER COLUMNS ###
-  data <- data[, c("geo_type", "geo_scope", "geo_year", "year", "r_type", 
+  df <- df[, c("geo_type", "geo_scope", "geo_year", "year", "r_type", 
                    "geo_id", "age", "age5", "age11", "age20", "s", "h", 
                    "rcode", "r1_3", "r2_4", "pop", "fips_co", 
                    "agestr", "gender","racemars", "hispanic")]
