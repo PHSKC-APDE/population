@@ -6,6 +6,8 @@ path_raw: //phdata01/DROF_DATA/DOH DATA/POP/data/raw
 path_tmp: C:/temp/pop
 index_type: ccs
 index_name: idx_ccs_ref_pop
+field_term: \t
+row_term: \n
 max_archive: 2
 geo_type:
   block: blk

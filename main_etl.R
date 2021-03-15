@@ -16,7 +16,8 @@ library(utils)
 library(dplyr)
 library(survPen)
 library(reticulate)
-
+library(stringr)
+library(xlsx)
 
 ### LOAD FUNCTIONS
 devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/master/db_loader/etl_log.R")
@@ -31,12 +32,12 @@ conn <- DBI::dbConnect(odbc::odbc(), "PH_APDEStore51")
 
 ### Load config file and create path variables+
 config <- yaml::yaml.load(httr::GET("https://raw.githubusercontent.com/PHSKC-APDE/population/master/config/common.pop.yaml"))
+
 path_raw <- config[["path_raw"]]
 path_tmp <-  config[["path_tmp"]]
 path_tmptxt <-  paste0(path_raw, "/tmp")
 in_geo_types <- c("blk","scd","zip") # c("blk", "blkg", "cou", "lgd", "scd", "ste", "trc", "zip")
-in_geo_types <- c("zip")
-min_year <- 2019
+min_year <- 2000
 
 # Select the folder to process and run the data processing functions
 select_qa_data_f()

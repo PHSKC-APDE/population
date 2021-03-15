@@ -102,6 +102,7 @@ clean_raw_r_f <- function(
   info,
   crosswalk,
   etl_batch_id = 0) {
+  
   ### CHANGE ORIGINAL COLUMN NAMES ###
   colnames(df) <- lapply(colnames(df), tolower)
   for (x in 1:length(colnames(df))) {
@@ -117,6 +118,7 @@ clean_raw_r_f <- function(
       colnames(df)[x] = "geo_id"
     }
   }
+  
   ### SET FIPS_CO COLUMN AND REMOVE DATA BASED ON GEO_SCOPE ###
   df$geo_id <- as.character(df$geo_id)
   if(info$geo_scope == "kps") {
@@ -125,20 +127,26 @@ clean_raw_r_f <- function(
   } else {
     df$fips_co <- NA
   }
+  
   ### SET COLUMNS BASED ON FILE INFO ###
   df$geo_type <- info$geo_type
   df$geo_scope <- info$geo_scope
   df$geo_year <- info$geo_year
   df$r_type <- info$r_type
+  df$year <- as.character(df$year)
+  
   ### FIX RACEMARS TO HAVE LEADING ZEROES ###
   df$racemars <- as.character(df$racemars)
   if(info$r_type == 97) {
     df$racemars <- str_pad(df$racemars, 5, side = "left", pad = "0")
   }
+  
   ### FIX AGESTR LENGTH ###
   df$agestr <- with(df, substring(agestr, 1, 3))
+  
   ### SET AGE ###
   df$age <- with(df, as.numeric(agestr))
+  
   ### SET AGE5 ###
   xwalk <- filter(crosswalk, new_column == "age5")
   xwalk <- select(xwalk, old_value_num_min, old_value_num_max, new_value_num)
@@ -148,6 +156,7 @@ clean_raw_r_f <- function(
     left_join(xwalk %>% mutate(dummy = TRUE)) %>%
     filter(age >= min, age <= max) %>%
     select(-dummy, -min, -max)
+  
   ### SET AGE11 ###
   xwalk <- filter(crosswalk, new_column == "age11")
   xwalk <- select(xwalk, old_value_num_min, old_value_num_max, new_value_num)
@@ -157,6 +166,7 @@ clean_raw_r_f <- function(
     left_join(xwalk %>% mutate(dummy = TRUE)) %>%
     filter(age >= min, age <= max) %>%
     select(-dummy, -min, -max)
+  
   ### SET AGE20 ###
   xwalk <- filter(crosswalk, new_column == "age20")
   xwalk <- select(xwalk, old_value_num_min, old_value_num_max, new_value_num)
@@ -166,22 +176,26 @@ clean_raw_r_f <- function(
     left_join(xwalk %>% mutate(dummy = TRUE)) %>%
     filter(age >= min, age <= max) %>%
     select(-dummy, -min, -max)
+  
   ### SET S (GENDER) ###
   xwalk <- filter(crosswalk, new_column == "s")
   xwalk <- select(xwalk, old_value_txt, new_value_num)
   colnames(xwalk) <- c("gender", "s")
   df <- inner_join(df, xwalk, by = "gender")
+  
   ### SET H (HISPANIC) ###
   xwalk <- filter(crosswalk, new_column == "h",)
   xwalk <- select(xwalk, old_value_txt, new_value_num)
   colnames(xwalk) <- c("hispanic", "h")
   xwalk$hispanic <- as.numeric(xwalk$hispanic)
   df <- inner_join(df, xwalk, by = "hispanic")
+  
   ### SET RCODE ###
   xwalk <- filter(crosswalk, new_column == "rcode", r_type == info$r_type)
   xwalk <- select(xwalk, old_value_txt, new_value_num)
   colnames(xwalk) <- c("racemars", "rcode")
   df <- inner_join(df, xwalk, by = "racemars")
+  
   ### SET R1_3 ###
   xwalk <- filter(crosswalk, new_column == "r1_3", r_type == info$r_type, old_column == "rcode")
   xwalk <- select(xwalk, old_value_num_min, old_value_num_max, new_value_num)
@@ -191,6 +205,7 @@ clean_raw_r_f <- function(
     left_join(xwalk %>% mutate(dummy = TRUE)) %>%
     filter(rcode >= min, rcode <= max) %>%
     select(-dummy, -min, -max)
+  
   ### SET R2_4 AND UPDATE BASED ON H ###
   xwalk <- filter(crosswalk, new_column == "r2_4", r_type == info$r_type, old_column == "rcode")
   xwalk <- select(xwalk, old_value_num_min, old_value_num_max, new_value_num)
@@ -206,11 +221,13 @@ clean_raw_r_f <- function(
   df <- left_join(df, xwalk, by = "h")
   df$r2_4 <- ifelse(is.na(df$r2_4), df$r, df$r2_4)
   df <- select(df, -r)
+  
   ### ORDER COLUMNS ###
   df <- df[, c("geo_type", "geo_scope", "geo_year", "year", "r_type", 
                    "geo_id", "age", "age5", "age11", "age20", "s", "h", 
                    "rcode", "r1_3", "r2_4", "pop", "fips_co", 
                    "agestr", "gender","racemars", "hispanic")]
+  
   ### SET ETL_BATCH_ID AND ID IF PRESENT ###
   if (etl_batch_id > 0) {
     df <- cbind(etl_batch_id, df)

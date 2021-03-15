@@ -8,10 +8,13 @@ vars:
   r_type: SMALLINT
   year: VARCHAR(4)
   col: VARCHAR(10)
-  val: VARCHAR(4)
+  val: SMALLINT
   pop: FLOAT
 cols:
   age: age
+  age5: age5
+  age11: age11
+  age20: age20
   gender: s
   race_eth: r2_4
-  
+  county: fips_co

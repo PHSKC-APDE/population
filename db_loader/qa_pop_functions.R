@@ -1,6 +1,7 @@
 
 ### FUNCTION TO SELECT BATCH AND START THE QA PROCESS
 select_qa_data_f <- function(){
+  
   qa_config <- yaml::yaml.load(httr::GET("https://raw.githubusercontent.com/PHSKC-APDE/population/master/config/qa.pop.yaml"))
   # List of folders that have raw data
   f_list <- list.dirs(path = path_raw, full.names = F, recursive = F)
@@ -18,15 +19,20 @@ select_qa_data_f <- function(){
   zipped_files <- as.data.frame(zipped_files[grepl("csv", zipped_files$filename, ignore.case = T), ])
   files <- data.frame(matrix(ncol = 6, nrow = 0))
   colnames(files) <- c("file_name", "geo_type", "geo_scope", "geo_year", "year", "r_type")
-  crosswalk <- DBI:dbGetQuery(conn, glue::glue_sql(
+  crosswalk <- DBI::dbGetQuery(conn, glue::glue_sql(
     "SELECT * FROM {`qa_config$schema_name`}.{`qa_config$crosswalk`}",
     .con = conn))
+  qa_ref <- DBI::dbGetQuery(conn, glue::glue_sql(
+    "SELECT * FROM {`qa_config$schema_name`}.{`qa_config$table_name`}",
+    .con = conn))
+  qa_ref$ref_pop <- qa_ref$pop
+  qa_ref <- select(qa_ref, -pop)
+  qa <- data.frame(matrix(ncol = 8, nrow = 0))
   
   for (z in 1:nrow(zipped_files)) {
     ### Clean out temp folder
     file.remove(list.files(path_tmp, include.dirs = F, full.names = T, recursive = T))
     ### Get list of files in the zip file
-    z <- 9
     files_in_zip <- utils::unzip(paste0(path_raw, "/", f_load, "/files_to_load/", zipped_files[z,]), list = TRUE)
     files_to_unzip <- c()
     ### Make a list of files that have not already been loaded for this batch
@@ -50,37 +56,74 @@ select_qa_data_f <- function(){
       # Get a list of the unzipped files
       unzipped_files <- as.data.frame(list.files(path_tmp, pattern = "\\.csv$", ignore.case = T))
       # Look at one unzipped file at a time
-      y <- 1
       for (y in 1:nrow(unzipped_files)) {
         pop_config <- yaml::yaml.load(httr::GET("https://raw.githubusercontent.com/PHSKC-APDE/population/master/config/common.pop.yaml"))
         
         # Use file name to determine other elements of the data and add to data frame
         file_info <- get_raw_file_info_f(config = pop_config, file_name = unzipped_files[y,])
-        
-        data <- read.csv(paste0(path_tmp, "/", unzipped_files[y,]))
-        # Change names of columns
-        colnames(data) <- lapply(colnames(data), tolower)
-        for (x in 1:length(colnames(data))) {
-          if (grepl("pop", colnames(data)[x]) == T) { 
-            colnames(data)[x] = "pop"
-          } else if (grepl("racemars", colnames(data)[x]) == T) {
-            colnames(data)[x] = "racemars"
-          }
-          else if (grepl("age", colnames(data)[x]) == T) {
-            colnames(data)[x] = "agestr"
-          }
-          else if (grepl("code", colnames(data)[x]) == T) {
-            colnames(data)[x] = "geo_id"
-          }
-        }
-        data <- data[, c("year", "geo_id", "racemars", "gender", "agestr", "hispanic", "pop")]
-        data$age <- with(data, as.numeric(substring(agestr, 1, 3)))
+        # Clean the data and get extra columns
+        data <- clean_raw_r_f(conn = conn, 
+                      df = read.csv(paste0(path_tmp, "/", unzipped_files[y,])), 
+                      info = file_info, 
+                      crosswalk = crosswalk, etl_batch_id = 88)
+        #data <- select(data, -r1_3, -rcode, -racemars, -h, -gender, -agestr, 
+        #               age, age11, age20, -geo_id, -fips_co, -hispanic)
+        # Add population totals for different groupings to qa dataframe
+        qa <- rbind(qa, data %>%
+                      group_by(geo_type, geo_scope, geo_year, r_type, year, col = "age", val = age) %>%
+                      summarize_at(vars(pop), list(raw_pop = sum)))
+        qa <- rbind(qa, data %>%
+                      group_by(geo_type, geo_scope, geo_year, r_type, year, col = "age5", val = age5) %>%
+                      summarize_at(vars(pop), list(raw_pop = sum)))
+        qa <- rbind(qa, data %>%
+                      group_by(geo_type, geo_scope, geo_year, r_type, year, col = "age11", val = age11) %>%
+                      summarize_at(vars(pop), list(raw_pop = sum)))
+        qa <- rbind(qa, data %>%
+                      group_by(geo_type, geo_scope, geo_year, r_type, year, col = "age20", val = age20) %>%
+                      summarize_at(vars(pop), list(raw_pop = sum)))
+        qa <- rbind(qa, data %>%
+                      group_by(geo_type, geo_scope, geo_year, r_type, year, col = "s", val = s) %>%
+                      summarize_at(vars(pop), list(raw_pop = sum)))
+        qa <- rbind(qa, data %>%
+                      group_by(geo_type, geo_scope, geo_year, r_type, year, col = "r2_4", val = r2_4) %>%
+                      summarize_at(vars(pop), list(raw_pop = sum)))
+        qa <- rbind(qa, data %>%
+                      group_by(geo_type, geo_scope, geo_year, r_type, year, col = "fips_co", val = fips_co) %>%
+                      summarize_at(vars(pop), list(raw_pop = sum)))
         
       }
       ### Empty tmp folder of csv files
-      #file.remove(list.files(path_tmp, include.dirs = F, full.names = T, recursive = T))
+      file.remove(list.files(path_tmp, include.dirs = F, full.names = T, recursive = T))
     }
   }
+  qa_raw_v_cref <- as.data.frame(inner_join(qa, qa_ref))
+  qa_raw_v_cref$diff <- with(qa_raw_v_cref, round(raw_pop - ref_pop, 6))
+  qa_raw_v_cref$perc <- with(qa_raw_v_cref, round(diff / ref_pop, 4))
+  qa_ref$year <- as.character(as.numeric(qa_ref$year) - 1)
+  qa_raw_v_pref <- as.data.frame(inner_join(qa, qa_ref))
+  qa_raw_v_pref$diff <- with(qa_raw_v_pref, round(raw_pop - ref_pop, 6))
+  qa_raw_v_pref$perc <- with(qa_raw_v_pref, round(diff / ref_pop, 4))
+  qa_filename <- paste0(path_raw, 
+                        "/QAResults-", 
+                        f_load, "-", 
+                        year(Sys.Date()), 
+                        str_pad(month(Sys.Date()), 2, side = "left", pad = "0"), 
+                        str_pad(day(Sys.Date()), 2, side = "left", pad = "0"), 
+                        ".xlsx")
+  if (file.exists(qa_filename)) {
+    file.remove(qa_filename)
+  }
+  write.xlsx(x = qa_raw_v_cref, 
+             file = qa_filename,
+             sheetName = "Raw Vs Cur Yr",
+             col.names = T,
+             row.names = F)
+  write.xlsx(x = qa_raw_v_pref, 
+             file = qa_filename,
+             sheetName = "Raw Vs Prev Yr",
+             col.names = T,
+             row.names = F,
+             append = T)
 }
 
 create_qa_pop_f <- function(conn){
