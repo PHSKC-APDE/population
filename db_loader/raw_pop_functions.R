@@ -231,7 +231,7 @@ clean_raw_r_f <- function(
   ### SET ETL_BATCH_ID AND ID IF PRESENT ###
   if (etl_batch_id > 0) {
     df$etl_batch_id <- etl_batch_id
-    df <- df %>% select(etl_batch_id, everything())
+    df <- df %>% select(last_col(), everything())
     df <- tibble::rowid_to_column(df, "id")
   }
   return(as.data.frame(df))
