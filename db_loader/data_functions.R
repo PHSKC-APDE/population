@@ -26,6 +26,7 @@ load_data_f <- function(
   message(etl_log_notes_f(conn = conn, 
                           batch_name = f_load,
                           note = "Loading data from folder"))
+
   for (z in 1:nrow(zipped_files)) {
     ### Clean out temp folder
     file.remove(list.files(path_tmp, include.dirs = F, full.names = T, recursive = T))

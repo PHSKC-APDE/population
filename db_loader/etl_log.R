@@ -83,7 +83,7 @@ create_etl_log_f <- function(
       .con = conn)
     etl_batch_id <- DBI::dbGetQuery(conn, sql_get)
   } else if(nrow(etl_batch_id) == 0 & create_id == F) { etl_batch_id <- 0 }
-  return(etl_batch_id)
+  return(as.numeric(etl_batch_id))
 }
 
 #### FUNCTION UPDATE ETL LOG DATETIME FIELD ####
