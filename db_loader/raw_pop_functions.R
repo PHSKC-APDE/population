@@ -223,17 +223,18 @@ clean_raw_r_f <- function(
   df <- select(df, -r)
   
   ### ORDER COLUMNS ###
-  df <- df[, c("geo_type", "geo_scope", "geo_year", "year", "r_type", 
-                   "geo_id", "age", "age5", "age11", "age20", "s", "h", 
-                   "rcode", "r1_3", "r2_4", "pop", "fips_co", 
-                   "agestr", "gender","racemars", "hispanic")]
+  df <- df[, c("geo_type", "geo_scope", "geo_year", "year", 
+                             "r_type", "geo_id", "age", "age5", "age11", "age20", 
+                             "s", "h", "rcode", "r1_3", "r2_4", "pop", "fips_co", 
+                             "agestr", "gender","racemars", "hispanic")]
   
   ### SET ETL_BATCH_ID AND ID IF PRESENT ###
   if (etl_batch_id > 0) {
-    df <- cbind(etl_batch_id, df)
+    df$etl_batch_id <- etl_batch_id
+    df <- df %>% select(etl_batch_id, everything())
     df <- tibble::rowid_to_column(df, "id")
   }
-  return(df)
+  return(as.data.frame(df))
 }
 
 #### FUNCTION GET INFO FROM RAW FILENAME ####
