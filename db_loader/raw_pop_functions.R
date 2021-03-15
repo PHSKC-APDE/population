@@ -7,7 +7,6 @@
 #### FUNCTION LOAD RAW DATA TO SQL####
 load_raw_f <- function(
   conn,
-  config,
   schema_name,
   table_name,
   path_tmp,
@@ -15,7 +14,9 @@ load_raw_f <- function(
   data,
   etl_batch_id,
   retry = F, 
-  write_local = T) {
+  write_local = T,
+  field_term = "\t",
+  row_term = "\n") {
   
   ### FULL PATH AND FILE NAME TO WRITE TEMP TXT FILE FOR LOCAL
   file_tmp <- paste0(path_tmp, "/tmp.txt")
@@ -58,20 +59,14 @@ load_raw_f <- function(
   if (grepl(":", file_tmptxt) == T) { file_load <- gsub("/","\\\\", file_tmptxt) 
   } else { file_load <- file_tmptxt }
   
-  ### CREATES RAW TABLE IF THIS IS THE FIRST TIME RUNNING
-  if (!retry) {
-    create_table_f(conn = conn, schema = schema_name, 
-                   table = table_name, vars = config$vars,
-                   overwrite = !retry)
-  }
   ### BCP CMD ARGUMENTS FOR SQL UPLOAD
   bcp_args <- c(glue(' PH_APDEStore.{schema_name}.{table_name} IN ', 
                      ' "{file_load}" ',
-                     ' -t {config$field_term} -r {config$row_term} -C 65001 -F 2 ',
+                     ' -t {field_term} -r {row_term} -C 65001 -F 2 ',
                      ' -S KCITSQLUTPDBH51 -T -b 100000 -c '))
   message(paste0('...', 
                  etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id,
-                                 note = "Loading data into raw.pop",
+                                 note = paste0("Loading data into ", schema_name, ".", table_name),
                                  full_msg = F)))
   system2(command = "bcp", args = c(bcp_args))
   
@@ -287,21 +282,4 @@ failed_raw_load_f <- function(
     if (nrow(results) > 0) { rows_loaded <- results[1,2] }
   } 
   return(rows_loaded)
-}
-
-#### FUNCTION TO IF ALL OF RAW DATA WAS CLEANED ####
-clean_raw_check_f <- function(
-  conn,
-  schema_name,
-  table_name) {
-  sql_get <- glue::glue_sql(
-      "SELECT TOP (1) id 
-      FROM {`schema_name`}.{`table_name`} 
-      WHERE geo_type IS NULL OR geo_scope IS NULL OR geo_year IS NULL 
-      OR r_type IS NULL OR age IS NULL OR age11 IS NULL
-      OR age20 IS NULL OR s IS NULL OR h IS NULL
-      OR rcode IS NULL OR r1_3 IS NULL OR r2_4 IS NULL",
-      .con = conn)
-    results <- DBI::dbGetQuery(conn, sql_get)
-  return(nrow(results))
 }

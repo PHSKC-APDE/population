@@ -77,7 +77,6 @@ load_data_f <- function(
       # Look at one unzipped file at a time
       for (y in 1:nrow(unzipped_files)) {
         pop_config <- yaml::yaml.load(httr::GET("https://raw.githubusercontent.com/PHSKC-APDE/population/master/config/common.pop.yaml"))
-        raw_config <- yaml::yaml.load(httr::GET("https://raw.githubusercontent.com/PHSKC-APDE/population/master/config/raw.pop_table.yaml"))
         # Use file name to determine other elements of the data and add to data frame
         message(etl_log_notes_f(conn = conn, 
                                 batch_name = f_load,
@@ -106,7 +105,7 @@ load_data_f <- function(
                                     display_only = T))
           } else { message(etl_log_notes_f(conn = conn, 
                                   etl_batch_id = etl_batch_id * -1,
-                                  note = "Already loaded to ref.pop",
+                                  note = paste0("Already loaded to ", pop_config$ref_schema, ".", table_name),
                                   display_only = T))
           }
         }
@@ -115,7 +114,7 @@ load_data_f <- function(
                                   etl_batch_id = etl_batch_id,
                                   note = "ETL Batch ID"))
           qa <- qa_etl_f(conn = conn, etl_batch_id = etl_batch_id)
-          if (qa$qa_rows_file == qa$qa_rows_load & is.na(qa$qa_rows_load) == F) {
+          if (qa$qa_rows_kept == qa$qa_rows_load & is.na(qa$qa_rows_load) == F) {
             message(etl_log_notes_f(conn = conn, 
                                     etl_batch_id = etl_batch_id,
                                     note = "Raw data already loaded"))
@@ -125,32 +124,34 @@ load_data_f <- function(
                                   etl_batch_id = etl_batch_id,
                                   note = "Reading data from file"))
             data <- read.csv(paste0(path_tmp, "/", unzipped_files[y,]))
-            # Change names of columns
-            colnames(data) <- lapply(colnames(data), tolower)
-            for (x in 1:length(colnames(data))) {
-              if (grepl("pop", colnames(data)[x]) == T) { 
-                colnames(data)[x] = "pop"
-              } else if (grepl("racemars", colnames(data)[x]) == T) {
-                colnames(data)[x] = "racemars"
-              }
-              else if (grepl("age", colnames(data)[x]) == T) {
-                colnames(data)[x] = "agestr"
-              }
-              else if (grepl("code", colnames(data)[x]) == T) {
-                colnames(data)[x] = "geo_id"
-              }
-            }
+
             ### Record number of rows in file
             qa_etl_f(conn = conn, etl_batch_id = etl_batch_id,
                    qa_val = nrow(data), "qa_rows_file")
-            ### Add ETL Batch ID to data and reorder columns
-            data["etl_batch_id"] = etl_batch_id
-            data <- data[, c("etl_batch_id", "year", "geo_id", "racemars", 
-                        "gender", "agestr", "hispanic", "pop")]
-            data <- tibble::rowid_to_column(data, "id")
+            
+            ### Clean raw data
+            message(etl_log_notes_f(conn = conn, 
+                                    etl_batch_id = etl_batch_id,
+                                    note = "Cleaning raw data"))
+            clean_raw_r_f(conn = conn,
+                          config = pop_config,
+                          df = data,
+                          info = file_info,
+                          etl_batch_id = etl_batch_id)
+            message(etl_log_notes_f(conn = conn, 
+                                    etl_batch_id = etl_batch_id,
+                                    note = "Raw data cleaned"))
+            
+            ### Check if raw data should go directly to archive
+#            skip_ref <- raw_archive_f(conn = conn, 
+#                                      archive_schema = pop_config$archive_schema,
+#                                      raw_schema = pop_config$raw_schema,
+#                                      table_name = table_name)
+           
+            schema_name <- pop_config$ref_schema
             ### Check if data has tried to load and how many rows were loaded
             data_start <- failed_raw_load_f(conn = conn, 
-                                            schema_name =  pop_config$raw_schema, 
+                                            schema_name = schema_name, 
                                             table_name = table_name,
                                             etl_batch_id = etl_batch_id)
             if(nrow(data) == data_start) {
@@ -162,7 +163,7 @@ load_data_f <- function(
                 ### Remove rows from dataframe that have already been loaded to raw
                 message(etl_log_notes_f(conn = conn, 
                                       etl_batch_id = etl_batch_id,
-                                      note = paste0("Loading data into raw that previously failed. Picking up at row ", data_start + 1)))
+                                      note = paste0("Loading data that previously failed. Picking up at row ", data_start + 1)))
                 if (data_start > 0) {
                   data <- data[-(1:data_start),]
                   retry <- T
@@ -181,21 +182,22 @@ load_data_f <- function(
                                     etl_batch_id = etl_batch_id,
                                     note = "Loading raw data"))
               qa_sql <- load_raw_f(conn = conn, 
-                                   config = raw_config,
-                                   schema_name = raw_config$schema_name,
+                                   config = pop_config,
+                                   schema_name = schema_name,
                                    table_name = table_name, 
                                    path_tmp = path_tmp, path_tmptxt = path_tmptxt,
                                    data = data, etl_batch_id = etl_batch_id,
                                    retry = retry, write_local = T)
               qa <- qa_etl_f(conn = conn, etl_batch_id = qa_sql[1,1],
                                qa_val = qa_sql[1,2], "qa_rows_load")
+              
               ### Check if all data was loaded and try to load any data that did not load the first time
-              if (qa$qa_rows_file != qa$qa_rows_load) {
+              if (qa$qa_rows_kept != qa$qa_rows_load) {
                 ### Reset SQL Connections
                 conn <- DBI::dbConnect(odbc::odbc(), "PH_APDEStore51")
                 ### Remove rows from dataframe that have already been loaded to raw
                 data_start <- failed_raw_load_f(conn = conn, 
-                                                schema_name =  pop_config$raw_schema, 
+                                                schema_name =  schema_name, 
                                                 table_name = table_name,
                                                 etl_batch_id = etl_batch_id)
                 if (data_start > 0 & is.na(qa$qa_rows_load) == T) {
@@ -207,13 +209,12 @@ load_data_f <- function(
                 }
                 message(etl_log_notes_f(conn = conn, 
                                       etl_batch_id = etl_batch_id,
-                                      note = paste0("Loading data into raw that previously failed. Picking up at row ", data_start + 1)))
+                                      note = paste0("Loading data that previously failed. Picking up at row ", data_start + 1)))
                 message(etl_log_notes_f(conn = conn, 
                                       etl_batch_id = etl_batch_id,
                                       note = "Loading raw data "))
                 qa_sql <- load_raw_f(conn = conn, 
-                                     config = raw_config,
-                                     schema_name = raw_config$schema_name,
+                                     schema_name = schema_name,
                                      table_name = table_name,
                                      path_tmp = path_tmp, path_tmptxt = path_tmptxt,
                                      data = data, etl_batch_id = etl_batch_id,
@@ -226,77 +227,15 @@ load_data_f <- function(
                       qa_val = qa_sql[1,3], "qa_pop_load")
               message(etl_log_notes_f(conn = conn, 
                                     etl_batch_id = etl_batch_id,
-                                    note = paste0("Data loaded to raw.", table_name)))
+                                    note = paste0("Data loaded to ", schema_name, ".", table_name)))
             }
           }
-          ### Clean raw data and add columns
-          message(etl_log_notes_f(conn = conn, 
-                                  etl_batch_id = etl_batch_id,
-                                  note = "Cleaning raw data"))
-          clean_raw_f(conn = conn, 
-                      config = raw_config,
-                      schema_name = raw_config$schema_name, 
-                      table_name = table_name, 
-                      etl_batch_id = etl_batch_id)
-          if (clean_raw_check_f(conn = conn, 
-                                schema_name = raw_config$schema_name, 
-                                table_name = table_name) > 0) {
-            message(etl_log_notes_f(conn = conn, 
-                                    etl_batch_id = etl_batch_id,
-                                    note = "Raw data not cleaned"))
-            message(etl_log_notes_f(conn = conn, 
-                                    etl_batch_id = etl_batch_id,
-                                    note = "Cleaning raw data"))
-            clean_raw_f(conn = conn, 
-                        config = raw_config,
-                        schema_name = raw_config$schema_name, 
-                        table_name = table_name, 
-                        etl_batch_id = etl_batch_id)
-          }
-          message(etl_log_notes_f(conn = conn, 
-                                  etl_batch_id = etl_batch_id,
-                                  note = "Raw data cleaned"))
+          
           ### Check for old data and move it from ref to archive
           load_archive_f(conn = conn, 
                          archive_schema = pop_config$archive_schema,
                          ref_schema = pop_config$ref_schema,
                          table_name = table_name)
-          ### Check if raw data should go directly to archive
-          skip_ref <- raw_archive_f(conn = conn, 
-                         archive_schema = pop_config$archive_schema,
-                         raw_schema = pop_config$raw_schema,
-                         table_name = table_name)
-          
-          ### Move data from raw to ref
-          if (skip_ref == F) {
-            message(etl_log_notes_f(conn = conn, 
-                                  etl_batch_id = etl_batch_id,
-                                  note = paste0("Moving new, cleaned data from raw.", 
-                                                table_name, " to ref.", table_name)))
-            data_move_f(conn = conn, to_schema = pop_config$ref_schema, 
-                      from_schema = pop_config$raw_schema, 
-                      table_name = table_name, etl_batch_id)
-            update_etl_log_datetime_f(
-              conn = conn, 
-              etl_batch_id = etl_batch_id,
-              field = "load_ref_datetime")
-            message(etl_log_notes_f(conn = conn, 
-                                  etl_batch_id = etl_batch_id,
-                                  note = paste0("New data loaded to ref.", table_name)))
-            update_etl_log_datetime_f(
-              conn = conn, 
-              etl_batch_id = etl_batch_id,
-              field = "delete_raw_datetime")
-            message(etl_log_notes_f(conn = conn, 
-                                  etl_batch_id = etl_batch_id,
-                                  note = "Raw data deleted"))
-            drop_table_f(conn = conn, schema = pop_config$raw_schema, table = table_name)
-            ### Check if new data is not the latest data and move it from ref to archive
-            load_archive_f(conn = conn, 
-                         archive_schema = pop_config$archive_schema,
-                         ref_schema = pop_config$ref_schema,
-                         table_name = table_name)
-          }
           
           ### File has been processed
           message(etl_log_notes_f(conn = conn, 

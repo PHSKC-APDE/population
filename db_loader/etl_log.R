@@ -122,7 +122,7 @@ qa_etl_f <- function(
     .con = conn))
   }
   sql_get <- glue::glue_sql(
-    "SELECT id, qa_rows_file, qa_rows_load, qa_rows_kept, qa_pop_load, qa_pop_kept FROM {`etl_schema`}.{`etl_table`} 
+    "SELECT id, qa_rows_file, qa_rows_kept, qa_rows_load, qa_pop_kept, qa_pop_load FROM {`etl_schema`}.{`etl_table`} 
       WHERE id = {etl_batch_id}",
     .con = conn)
   qa_results <- DBI::dbGetQuery(conn, sql_get)
