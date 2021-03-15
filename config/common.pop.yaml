@@ -2,6 +2,8 @@ raw_schema: raw
 ref_schema: ref
 archive_schema: archive
 table_name: pop
+crosswalk_table: pop_crosswalk
+label_table: pop_labels
 path_raw: //phdata01/DROF_DATA/DOH DATA/POP/data/raw
 path_tmp: C:/temp/pop
 index_type: ccs

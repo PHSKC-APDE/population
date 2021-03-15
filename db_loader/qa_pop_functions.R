@@ -13,15 +13,14 @@ select_qa_data_f <- function(){
   # Set path for 7-zip
   old_path <- Sys.getenv("PATH")
   Sys.setenv(PATH = paste(old_path, "C:\\ProgramData\\Microsoft\\AppV\\Client\\Integration\\562FBB69-6389-4697-9A54-9FF814E30039\\Root\\VFS\\ProgramFilesX64\\7-Zip", sep = ";"))
+  
   ### Create list of zip files with csvs in raw data folder
   zipped_files <- as.data.frame(list.files(paste0(path_raw, "/", f_load, "/files_to_load"), pattern = "\\.zip$", ignore.case = T))
   colnames(zipped_files)[1] = "filename"
   zipped_files <- as.data.frame(zipped_files[grepl("csv", zipped_files$filename, ignore.case = T), ])
   files <- data.frame(matrix(ncol = 6, nrow = 0))
   colnames(files) <- c("file_name", "geo_type", "geo_scope", "geo_year", "year", "r_type")
-  crosswalk <- DBI::dbGetQuery(conn, glue::glue_sql(
-    "SELECT * FROM {`qa_config$schema_name`}.{`qa_config$crosswalk`}",
-    .con = conn))
+  
   qa_ref <- DBI::dbGetQuery(conn, glue::glue_sql(
     "SELECT * FROM {`qa_config$schema_name`}.{`qa_config$table_name`}",
     .con = conn))
@@ -65,9 +64,8 @@ select_qa_data_f <- function(){
         data <- clean_raw_r_f(conn = conn, 
                       df = read.csv(paste0(path_tmp, "/", unzipped_files[y,])), 
                       info = file_info, 
-                      crosswalk = crosswalk, etl_batch_id = 88)
-        #data <- select(data, -r1_3, -rcode, -racemars, -h, -gender, -agestr, 
-        #               age, age11, age20, -geo_id, -fips_co, -hispanic)
+                      config = pop_config)
+
         # Add population totals for different groupings to qa dataframe
         qa <- rbind(qa, data %>%
                       group_by(geo_type, geo_scope, geo_year, r_type, year, col = "age", val = age) %>%
@@ -96,6 +94,8 @@ select_qa_data_f <- function(){
       file.remove(list.files(path_tmp, include.dirs = F, full.names = T, recursive = T))
     }
   }
+  
+  ### Create qa comparison columns and data sets
   qa_raw_v_cref <- as.data.frame(inner_join(qa, qa_ref))
   qa_raw_v_cref$diff <- with(qa_raw_v_cref, round(raw_pop - ref_pop, 6))
   qa_raw_v_cref$perc <- with(qa_raw_v_cref, round(diff / ref_pop, 4))
@@ -103,6 +103,8 @@ select_qa_data_f <- function(){
   qa_raw_v_pref <- as.data.frame(inner_join(qa, qa_ref))
   qa_raw_v_pref$diff <- with(qa_raw_v_pref, round(raw_pop - ref_pop, 6))
   qa_raw_v_pref$perc <- with(qa_raw_v_pref, round(diff / ref_pop, 4))
+  
+  ### Write QA datasets to excel
   qa_filename <- paste0(path_raw, 
                         "/QAResults-", 
                         f_load, "-", 
@@ -124,6 +126,10 @@ select_qa_data_f <- function(){
              col.names = T,
              row.names = F,
              append = T)
+  message("QA Results File Complete - ", qa_filename)
+  rm(f_list,  f_load,  files_to_unzip, files_in_zip, files, file_info, 
+     unzipped_files, zipped_files, z_args, old_path, pop_config, data, z, y, u,
+     qa_ref, qa_raw_v_cref, qa_raw_v_pref, qa_filename, qa_config, qa)
 }
 
 create_qa_pop_f <- function(conn){
