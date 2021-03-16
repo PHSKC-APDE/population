@@ -27,10 +27,6 @@ devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/ma
 devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/master/db_loader/qa_pop_functions.R")
 devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/master/db_loader/archive_pop_functions.R")
 
-
-### Set SQL Connections
-conn <- DBI::dbConnect(odbc::odbc(), "PH_APDEStore51")
-
 ### Load config file and create path variables+
 config <- yaml::yaml.load(httr::GET("https://raw.githubusercontent.com/PHSKC-APDE/population/master/config/common.pop.yaml"))
 

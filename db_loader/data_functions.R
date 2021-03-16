@@ -12,7 +12,6 @@ process_data_f <- function(
   path_tmptxt,
   f_load) {
   
-  conn <- DBI::dbConnect(odbc::odbc(), "PH_APDEStore51")
   # Set path for 7-zip
   old_path <- Sys.getenv("PATH")
   Sys.setenv(PATH = paste(old_path, "C:\\ProgramData\\Microsoft\\AppV\\Client\\Integration\\562FBB69-6389-4697-9A54-9FF814E30039\\Root\\VFS\\ProgramFilesX64\\7-Zip", sep = ";"))
@@ -371,6 +370,7 @@ select_process_data_f <- function(){
   ###   Example: SQL Connection Error
   repeat {
     message(paste0("Try #", trynum))
+    conn <- create_conn_f()
     complete <- tryCatch(process_data_f(conn = conn, 
                                      path_raw = path_raw, 
                                      path_tmp = path_tmp, 

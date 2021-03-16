@@ -133,7 +133,8 @@ select_qa_data_f <- function(){
      qa_ref, qa_raw_v_cref, qa_raw_v_pref, qa_filename, qa_config, qa)
 }
 
-create_qa_pop_f <- function(conn){
+create_qa_pop_f <- function(){
+  conn <- create_conn_f()
   qa_config <- yaml::yaml.load(httr::GET("https://raw.githubusercontent.com/PHSKC-APDE/population/master/config/qa.pop.yaml"))
   schema_name <- qa_config$schema_name
   qa_table <-  qa_config$table_name

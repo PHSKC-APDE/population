@@ -4,6 +4,12 @@
 #
 # 2020-12
 
+### FUNCTION TO CREATE DATABASE CONNECTION
+create_conn_f <-function() {
+  conn <- DBI::dbConnect(odbc::odbc(), "PH_APDEStore51")
+  return(conn)
+}
+
 ### FUNCTION TO CREATE TABLE BASED ON DATAFRAME OF VARS
 create_table_f <- function(
   conn,
