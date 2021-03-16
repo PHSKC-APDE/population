@@ -45,9 +45,9 @@ load_archive_f <- function(
                                       table_name, " for ETL Batch ID ", 
                                       to_archive[a,2]),
                         full_msg = F)))
-      data_move_f(conn = conn, to_schema = archive_schema, 
-                  from_schema = ref_schema, table_name = table_name, 
-                  etl_batch_id = to_archive[a,1])
+      data_move_r_f(conn = conn, to_schema = archive_schema, 
+                    from_schema = ref_schema, table_name = table_name, 
+                    etl_batch_id = to_archive[a,1])
       update_etl_log_datetime_f(
         conn = conn, 
         etl_batch_id = to_archive[a, 1],
@@ -82,10 +82,9 @@ load_archive_f <- function(
 #### FUNCTION TO SEND RAW DATA DIRECTLY TO ARCHIVE ####
 raw_archive_f <- function(
   conn,
-  archive_schema,
-  raw_schema,
-  table_name) {
-  ### Determine if there is old data in ref that needs to be archived
+  etl_batch_id) {
+  
+  ### Determine if new data needs to go directly to archive
   to_archive <- DBI::dbGetQuery(conn, glue::glue_sql(
     "SELECT x.id AS 'archive_id', z.id AS 'ref_id', x.r_type
       FROM [metadata].[pop_etl_log] AS x
@@ -101,70 +100,12 @@ raw_archive_f <- function(
           AND y.r_type = z.r_type AND y.year = z.year 
           AND y.max_batch_date = z.batch_date
       WHERE x.batch_date < y.max_batch_date 
-		    AND x.load_raw_datetime IS NOT NULL
+		    AND x.id = {etl_batch_id}
 		    AND x.load_ref_datetime IS NULL
 		    AND x.load_archive_datetime IS NULL",
     .con = conn))
-  ### Archive the old data and remove from ref
-  if (nrow(to_archive) > 0) {
-    for (a in 1:nrow(to_archive)) {
-      message(
-        etl_log_notes_f(conn = conn,
-                        etl_batch_id = to_archive[a,2],
-                        note = paste0("Begin archiving old data from ETL Batch ID ", 
-                                      to_archive[a,1])))
-      message(paste0("ETL Batch ID - ", to_archive[a,1], ": ",
-                     etl_log_notes_f(conn = conn, 
-                                     etl_batch_id = to_archive[a,1],
-                                     note = paste0("Moving old data from ", 
-                                                   raw_schema, ".", table_name, 
-                                                   " to ", archive_schema, ".", 
-                                                   table_name, 
-                                                   " for ETL Batch ID ", 
-                                                   to_archive[a,2]),
-                                     full_msg = F)))
-      data_move_f(conn = conn, to_schema = archive_schema, 
-                  from_schema = raw_schema, table_name = table_name, 
-                  etl_batch_id = to_archive[a,1])
-      update_etl_log_datetime_f(
-        conn = conn, 
-        etl_batch_id = to_archive[a, 1],
-        field = "delete_raw_datetime")
-      update_etl_log_datetime_f(
-        conn = conn, 
-        etl_batch_id = to_archive[a, 1],
-        field = "load_ref_datetime")
-      update_etl_log_datetime_f(
-        conn = conn, 
-        etl_batch_id = to_archive[a, 1],
-        field = "delete_ref_datetime")
-      update_etl_log_datetime_f(
-        conn = conn, 
-        etl_batch_id = to_archive[a, 1],
-        field = "load_archive_datetime")
-      message(paste0("ETL Batch ID - ", to_archive[a,1], ": ",
-                     etl_log_notes_f(conn = conn, 
-                                     etl_batch_id = to_archive[a,1],
-                                     note = paste0("Old data loaded to ", 
-                                                   archive_schema, ".", 
-                                                   table_name),
-                                     full_msg = F)))
-      message(paste0("ETL Batch ID - ", to_archive[a,1], ": ",
-                     etl_log_notes_f(conn = conn, 
-                                     etl_batch_id = to_archive[a,1],
-                                     note = paste0("Old data deleted from ", 
-                                                   raw_schema, ".", table_name),
-                                     full_msg = F)))
-      message(
-        etl_log_notes_f(conn = conn,
-                        etl_batch_id = to_archive[a,2],
-                        note = paste0("Archiving old data from ETL Batch ID ", 
-                                      to_archive[a,1], " complete")))
-    }
-    return(T)
-    drop_table_f(conn = conn, schema = raw_schema, table = table_name)
-  }
-  return(F)
+  
+  return(to_archive)
 }
 
 

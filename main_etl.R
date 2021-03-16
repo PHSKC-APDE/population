@@ -27,6 +27,7 @@ devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/ma
 devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/master/db_loader/qa_pop_functions.R")
 devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/master/db_loader/archive_pop_functions.R")
 
+
 ### Set SQL Connections
 conn <- DBI::dbConnect(odbc::odbc(), "PH_APDEStore51")
 
@@ -39,9 +40,13 @@ path_tmptxt <-  paste0(path_raw, "/tmp")
 in_geo_types <- c("blk","scd","zip") # c("blk", "blkg", "cou", "lgd", "scd", "ste", "trc", "zip")
 min_year <- 2000
 
-# Select the folder to process and run the data processing functions
+### Select the folder to qa data against what is in the database
 select_qa_data_f()
+
+### Select the folder to process and run the data processing functions
 select_process_data_f()
+
+### Create a new qa table with population sums for various column groupings
 create_qa_pop_f(conn)
 
 warnings()

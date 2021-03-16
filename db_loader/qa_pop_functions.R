@@ -155,6 +155,7 @@ create_qa_pop_f <- function(conn){
       .con = conn), sep = ', '))}, 
       {cols[c]}, {`cols[[c]]`}, SUM(\"pop\")
       FROM {`schema_name`}.{`ref_table`}
+      WHERE {`cols[[c]]`} IS NOT NULL
       GROUP BY
       {DBI::SQL(glue::glue_collapse(glue::glue_sql('{`names(sel_vars)`}', 
       .con = conn), sep = ', '))}, {`cols[[c]]`}
@@ -169,6 +170,7 @@ create_qa_pop_f <- function(conn){
       .con = conn), sep = ', '))}, 
       {cols[c]}, {`cols[[c]]`}, SUM(\"pop\")
       FROM {`schema_name`}.{`ref_table77`}
+      WHERE {`cols[[c]]`} IS NOT NULL
       GROUP BY
       {DBI::SQL(glue::glue_collapse(glue::glue_sql('{`names(sel_vars)`}', 
       .con = conn), sep = ', '))}, {`cols[[c]]`}

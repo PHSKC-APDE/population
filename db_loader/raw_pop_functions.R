@@ -9,84 +9,21 @@ load_raw_f <- function(
   conn,
   schema_name,
   table_name,
-  path_tmp,
-  path_tmptxt,
   data,
-  etl_batch_id,
-  retry = F, 
-  write_local = T,
-  field_term = "\t",
-  row_term = "\n") {
+  etl_batch_id) {
   
-  ### FULL PATH AND FILE NAME TO WRITE TEMP TXT FILE FOR LOCAL
-  file_tmp <- paste0(path_tmp, "/tmp.txt")
-  ### FULL PATH AND FILE NAME FOR TEMP TXT FILE TO BE READ FROM FOR BCP
-  file_tmptxt <- paste0(path_tmptxt, "/tmp.txt")
-  
-  if (write_local == T) {
-    ### WRITES FILE LOCALLY THEN COPIES IT TO NETWORK FOLDER
-    if (file.exists(file_tmp)) {
-      file.remove(file_tmp)
-    }
-    message(paste0('...', 
-                   etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id,
-                                   note = "Writing tmp.txt file locally",
-                                   full_msg = F)))
-    write.table(data, file = file_tmp, sep = "\t", eol = "\n", quote = F, row.names = F, col.names = T)
-    if (file.exists(file_tmptxt)) {
-      file.remove(file_tmptxt)
-    }
-    message(paste0('...', 
-                   etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id,
-                                   note = "Copying tmp.txt file to server",
-                                   full_msg = F)))
-    file.copy(file_tmp, path_tmptxt)
-  } else {
-    ### WRITES FILE TO NETWORK FOLDER
-    if (file.exists(file_tmptxt)) {
-      file.remove(file_tmptxt)
-    }
-    message(paste0('...', 
-                   etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id,
-                                   note = "Writing tmp.txt file to server",
-                                   full_msg = F)))
-    write.table(data, file = file_tmptxt, sep = "\t", eol = "\n", quote = F, row.names = F, col.names = T)
-    if (grepl(":", file_tmptxt) == T) { file_load <- gsub("/","\\\\", file_tmptxt) 
-    } else { file_load <- file_tmptxt }
-  }
-  
-  ### PREPS PATH TO WORK WITH BCP
-  if (grepl(":", file_tmptxt) == T) { file_load <- gsub("/","\\\\", file_tmptxt) 
-  } else { file_load <- file_tmptxt }
-  
-  ### BCP CMD ARGUMENTS FOR SQL UPLOAD
-  bcp_args <- c(glue(' PH_APDEStore.{schema_name}.{table_name} IN ', 
-                     ' "{file_load}" ',
-                     ' -t {field_term} -r {row_term} -C 65001 -F 2 ',
-                     ' -S KCITSQLUTPDBH51 -T -b 100000 -c '))
-  message(paste0('...', 
-                 etl_log_notes_f(conn = conn, etl_batch_id = etl_batch_id,
-                                 note = paste0("Loading data into ", schema_name, ".", table_name),
-                                 full_msg = F)))
-  system2(command = "bcp", args = c(bcp_args))
+  ### LOAD DATA TO REF
+  load_data_f(data, schema_name, table_name)
   
   ### GETS NUMBER OF ROWS LOADED TO SQL AND RETURNS THE NUMBER
   sql_get <- glue::glue_sql(
-    "SELECT etl_batch_id, COUNT(*) AS cnt_rows, ROUND(SUM(pop), 2) AS sum_pop
+    "SELECT etl_batch_id, COUNT(id) AS cnt_rows, ROUND(SUM(pop), 2) AS sum_pop
       FROM {`schema_name`}.{`{table_name}`} 
       WHERE etl_batch_id = {etl_batch_id}
       GROUP BY etl_batch_id",
     .con = conn)
   rows_loaded <- DBI::dbGetQuery(conn, sql_get)
-  for(i in 1:nrow(rows_loaded)) {
-    update_etl_log_datetime_f(
-      conn = conn, 
-      etl_batch_id = rows_loaded[i, 1],
-      field = "load_raw_datetime")
-  }
-  if (file.exists(file_tmp)) {
-    file.remove(file_tmp)
-  }
+
   return(rows_loaded)
 }
 

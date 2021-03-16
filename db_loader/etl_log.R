@@ -30,7 +30,7 @@ create_etl_log_f <- function(
       WHERE batch_name = {batch_name} AND file_name = {file_name} 
       AND geo_type = {geo_type} AND ISNULL(geo_scope, 0) = ISNULL({geo_scope}, 0)
       AND geo_year = {geo_year} AND year = {year} AND r_type = {r_type}
-      AND (load_raw_datetime IS NULL OR load_ref_datetime IS NULL)
+      AND load_ref_datetime IS NULL
       ORDER BY id DESC",
     .con = conn)
   etl_batch_id <- DBI::dbGetQuery(conn, sql_get)
@@ -43,7 +43,7 @@ create_etl_log_f <- function(
       WHERE batch_name = {batch_name} AND file_name = {file_name} 
       AND geo_type = {geo_type} AND ISNULL(geo_scope, 0) = ISNULL({geo_scope}, 0)
       AND geo_year = {geo_year} AND year = {year} AND r_type = {r_type}
-      AND load_raw_datetime IS NOT NULL AND load_ref_datetime IS NOT NULL
+      AND load_ref_datetime IS NOT NULL
       ORDER BY id DESC",
       .con = conn)
     etl_batch_id <- DBI::dbGetQuery(conn, sql_get)
@@ -78,7 +78,7 @@ create_etl_log_f <- function(
       WHERE batch_name = {batch_name} AND file_name = {file_name} 
       AND geo_type = {geo_type} AND ISNULL(geo_scope, 0) = ISNULL({geo_scope}, 0)
       AND geo_year = {geo_year} AND year = {year} AND r_type = {r_type}
-      AND load_raw_datetime IS NULL
+      AND load_ref_datetime IS NULL
       ORDER BY id DESC",
       .con = conn)
     etl_batch_id <- DBI::dbGetQuery(conn, sql_get)
