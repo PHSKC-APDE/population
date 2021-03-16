@@ -17,7 +17,7 @@ load_raw_f <- function(
   
   ### GETS NUMBER OF ROWS LOADED TO SQL AND RETURNS THE NUMBER
   sql_get <- glue::glue_sql(
-    "SELECT etl_batch_id, COUNT(id) AS cnt_rows, ROUND(SUM(pop), 2) AS sum_pop
+    "SELECT etl_batch_id, COUNT(id) AS cnt_rows, SUM(pop) AS sum_pop
       FROM {`schema_name`}.{`{table_name}`} 
       WHERE etl_batch_id = {etl_batch_id}
       GROUP BY etl_batch_id",
