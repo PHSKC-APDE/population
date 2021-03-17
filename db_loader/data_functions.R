@@ -26,7 +26,7 @@ process_data_f <- function(
                           batch_name = f_load,
                           note = "Loading data from folder"))
   
-  for (z in 1:1) {
+  for (z in 1:nrow(zipped_files)) {
     ### Clean out temp folder
     file.remove(list.files(path_tmp, include.dirs = F, full.names = T, recursive = T))
     ### Get list of files in the zip file
@@ -218,8 +218,15 @@ process_data_f <- function(
           ### Record number of rows and total pop loaded
           qa_etl_f(conn = conn, etl_batch_id = qa_sql[1,1],
                    qa_val = qa_sql[1,2], "qa_rows_load")
+          pop_load <- as.integer(
+            dbGetQuery(conn, 
+                       glue::glue_sql(
+                         "SELECT SUM(pop) 
+                         FROM {`schema_name`}.{`table_name`}
+                         WHERE etl_batch_id = {etl_batch_id}",
+                         .con = conn)))
           qa_etl_f(conn = conn, etl_batch_id = qa_sql[1,1],
-                   qa_val = qa_sql[1,3], "qa_pop_load")
+                   qa_val = pop_load, "qa_pop_load")
           
           ### Record etl log datetimes
           update_etl_log_datetime_f(
