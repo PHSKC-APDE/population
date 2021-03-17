@@ -218,7 +218,7 @@ process_data_f <- function(
           ### Record number of rows and total pop loaded
           qa_etl_f(conn = conn, etl_batch_id = qa_sql[1,1],
                    qa_val = qa_sql[1,2], "qa_rows_load")
-          pop_load <- as.integer(
+          pop_load <- as.numeric(
             dbGetQuery(conn, 
                        glue::glue_sql(
                          "SELECT SUM(pop) 
