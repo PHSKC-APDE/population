@@ -26,7 +26,7 @@ process_data_f <- function(
                           batch_name = f_load,
                           note = "Loading data from folder"))
   
-  for (z in 1:nrow(zipped_files)) {
+  for (z in 1:1) {
     ### Clean out temp folder
     file.remove(list.files(path_tmp, include.dirs = F, full.names = T, recursive = T))
     ### Get list of files in the zip file
