@@ -1,7 +1,7 @@
 raw_schema: raw
 ref_schema: ref
 archive_schema: archive
-table_name: popz
+table_name: popx
 crosswalk_table: pop_crosswalk
 label_table: pop_labels
 path_raw: //phdata01/DROF_DATA/DOH DATA/POP/data/raw
