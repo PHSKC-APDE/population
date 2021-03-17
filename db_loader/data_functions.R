@@ -340,7 +340,7 @@ data_move_r_f <- function(
   
   ### Insert data from dataframe to the to table
   message(paste0("DATA MOVE - Loading data to ", to_schema, ".", table_name))
-  load_data_f(data, to_schema, table_name)
+  load_data_f(conn, data, to_schema, table_name)
   
   ### Removes data from the from table
   message(paste0("DATA MOVE - Removing data from ", from_schema, ".", table_name))
@@ -387,7 +387,8 @@ select_process_data_f <- function(){
   #            table = pop_config$table_name, index_name = pop_config$index_name
 }
 
-load_data_f <- function(data,
+load_data_f <- function(conn,
+                        data,
                         schema_name,
                         table_name){
   ### Set data loading increment size and data stop variables

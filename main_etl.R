@@ -43,7 +43,7 @@ select_qa_data_f()
 select_process_data_f()
 
 ### Create a new qa table with population sums for various column groupings
-create_qa_pop_f(conn)
+create_qa_pop_f()
 
 warnings()
 

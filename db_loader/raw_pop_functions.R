@@ -13,7 +13,7 @@ load_raw_f <- function(
   etl_batch_id) {
   
   ### LOAD DATA TO REF
-  load_data_f(data, schema_name, table_name)
+  load_data_f(conn, data, schema_name, table_name)
   
   ### GETS NUMBER OF ROWS LOADED TO SQL AND RETURNS THE NUMBER
   sql_get <- glue::glue_sql(

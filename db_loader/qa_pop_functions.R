@@ -1,7 +1,7 @@
 
 ### FUNCTION TO SELECT BATCH AND START THE QA PROCESS
 select_qa_data_f <- function(){
-  
+  conn <- create_conn_f()
   qa_config <- yaml::yaml.load(httr::GET("https://raw.githubusercontent.com/PHSKC-APDE/population/master/config/qa.pop.yaml"))
   # List of folders that have raw data
   f_list <- list.dirs(path = path_raw, full.names = F, recursive = F)
