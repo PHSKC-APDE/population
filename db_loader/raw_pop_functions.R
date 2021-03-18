@@ -25,7 +25,7 @@ load_raw_f <- function(
   data_loaded$rows <- nrow(pop_load)
   data_loaded$pop <- as.numeric(pop_load %>% summarize_at(vars(pop), list(tot_pop = sum)))
   
-  return(rows_loaded)
+  return(data_loaded)
 }
 
 #### FUNCTION TO CLEAN RAW DATA IN R AND RETURN CLEANED DATAFRAME ####
