@@ -35,10 +35,7 @@ clean_raw_r_f <- function(
   df,
   info,
   etl_batch_id = 0) {
-  
-  info <- file_info
-  df <- data
-  
+
   ### Get population and hra crosswalk
   crosswalk <- DBI::dbGetQuery(conn, glue::glue_sql(
     "SELECT * FROM {`config$ref_schema`}.{`config$crosswalk_table`}",
