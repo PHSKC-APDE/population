@@ -207,31 +207,25 @@ process_data_f <- function(
               message(etl_log_notes_f(conn = conn, 
                                       etl_batch_id = etl_batch_id,
                                       note = paste0("Loading clean data into ", schema_name, ".", table_name)))
-              qa_sql <- load_raw_f(conn = conn, 
+              load_results <- load_raw_f(conn = conn, 
                                    schema_name = schema_name,
                                    table_name = table_name, 
                                    data = data, 
                                    etl_batch_id = etl_batch_id)
             }
           }
-          
+
           ### Record number of rows and total pop loaded
-          qa_etl_f(conn = conn, etl_batch_id = qa_sql[1,1],
-                   qa_val = qa_sql[1,2], "qa_rows_load")
-          pop_load <- as.numeric(
-            dbGetQuery(conn, 
-                       glue::glue_sql(
-                         "SELECT SUM(pop) 
-                         FROM {`schema_name`}.{`table_name`}
-                         WHERE etl_batch_id = {etl_batch_id}",
-                         .con = conn)))
-          qa_etl_f(conn = conn, etl_batch_id = qa_sql[1,1],
-                   qa_val = pop_load, "qa_pop_load")
+          qa_etl_f(conn = conn, etl_batch_id = etl_batch_id,
+                   qa_val = load_results$rows, "qa_rows_load")
+          
+          qa_etl_f(conn = conn, etl_batch_id = etl_batch_id,
+                   qa_val = load_results$pop, "qa_pop_load")
           
           ### Record etl log datetimes
           update_etl_log_datetime_f(
             conn = conn, 
-            etl_batch_id = qa_sql[1, 1],
+            etl_batch_id = etl_batch_id,
             field = "load_ref_datetime")
           if(nrow(skip_ref) > 0) {
             update_etl_log_datetime_f(

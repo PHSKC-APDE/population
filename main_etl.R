@@ -35,6 +35,7 @@ path_tmp <-  config[["path_tmp"]]
 path_tmptxt <-  paste0(path_raw, "/tmp")
 in_geo_types <- c("blk","scd","zip") # c("blk", "blkg", "cou", "lgd", "scd", "ste", "trc", "zip")
 min_year <- 2000
+memory.limit(size = 56000)
 
 ### Select the folder to qa data against what is in the database
 select_qa_data_f()
@@ -46,3 +47,4 @@ select_process_data_f()
 create_qa_pop_f()
 
 warnings()
+

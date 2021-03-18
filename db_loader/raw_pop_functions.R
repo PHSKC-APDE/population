@@ -36,6 +36,9 @@ clean_raw_r_f <- function(
   info,
   etl_batch_id = 0) {
   
+  info <- file_info
+  df <- data
+  
   ### Get population and hra crosswalk
   crosswalk <- DBI::dbGetQuery(conn, glue::glue_sql(
     "SELECT * FROM {`config$ref_schema`}.{`config$crosswalk_table`}",
@@ -163,11 +166,21 @@ clean_raw_r_f <- function(
   df$r2_4 <- ifelse(is.na(df$r2_4), df$r, df$r2_4)
   df <- select(df, -r)
   
+  ### SET HRA ###
+  if(info$geo_type == 'blk') {
+    hra <- hra %>%
+      filter(geo_year == info$geo_year) %>%
+      select(-geo_year)
+    colnames(hra) <- c("geo_id", "hra_id")
+    df <- df %>%
+      left_join(hra)
+  }
+  
   ### ORDER COLUMNS ###
   df <- df[, c("geo_type", "geo_scope", "geo_year", "year", 
                              "r_type", "geo_id", "age", "age5", "age11", "age20", 
                              "s", "h", "rcode", "r1_3", "r2_4", "pop", "fips_co", 
-                             "agestr", "gender","racemars", "hispanic")]
+                             "agestr", "gender","racemars", "hispanic", "hra_id")]
   
   ### SET ETL_BATCH_ID AND ID IF PRESENT ###
   if (etl_batch_id > 0) {
