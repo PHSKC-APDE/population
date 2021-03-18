@@ -16,14 +16,15 @@ load_raw_f <- function(
   load_data_f(conn, data, schema_name, table_name)
   
   ### GETS NUMBER OF ROWS LOADED TO SQL AND RETURNS THE NUMBER
-  sql_get <- glue::glue_sql(
-    "SELECT etl_batch_id, COUNT(id) AS cnt_rows, SUM(pop) AS sum_pop
-      FROM {`schema_name`}.{`{table_name}`} 
-      WHERE etl_batch_id = {etl_batch_id}
-      GROUP BY etl_batch_id",
-    .con = conn)
-  rows_loaded <- DBI::dbGetQuery(conn, sql_get)
-
+  pop_load <- DBI::dbGetQuery(conn, 
+                              glue::glue_sql(
+                                "SELECT pop
+                         FROM {`schema_name`}.{`table_name`}
+                         WHERE etl_batch_id = {etl_batch_id}",
+                                .con = conn))
+  data_loaded$rows <- nrow(pop_load)
+  data_loaded$pop <- as.numeric(pop_load %>% summarize_at(vars(pop), list(tot_pop = sum)))
+  
   return(rows_loaded)
 }
 
@@ -35,9 +36,12 @@ clean_raw_r_f <- function(
   info,
   etl_batch_id = 0) {
   
-  ### Get population crosswalk
+  ### Get population and hra crosswalk
   crosswalk <- DBI::dbGetQuery(conn, glue::glue_sql(
     "SELECT * FROM {`config$ref_schema`}.{`config$crosswalk_table`}",
+    .con = conn))
+  hra <- DBI::dbGetQuery(conn, glue::glue_sql(
+    "SELECT * FROM {`config$ref_schema`}.{`config$hra_table`}",
     .con = conn))
   
   ### CHANGE ORIGINAL COLUMN NAMES ###

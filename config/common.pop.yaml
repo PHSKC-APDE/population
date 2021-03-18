@@ -3,6 +3,7 @@ ref_schema: ref
 archive_schema: archive
 table_name: popx
 crosswalk_table: pop_crosswalk
+hra_table: pop_hra_blk_crosswalk
 label_table: pop_labels
 path_raw: //phdata01/DROF_DATA/DOH DATA/POP/data/raw
 path_tmp: C:/temp/pop
