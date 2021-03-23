@@ -13,18 +13,21 @@ load_archive_f <- function(
   ref_schema,
   table_name) {
   ### Determine if there is old data in ref that needs to be archived
+  etl_schema <- config$etl_schema
+  etl_table <- config$etl_table
+  
   to_archive <- DBI::dbGetQuery(conn, glue::glue_sql(
     "SELECT x.id AS 'archive_id', z.id AS 'ref_id'
-      FROM [PH_APDEStore].[metadata].[pop_etl_log] AS x
+      FROM {`etl_schema`}.{`etl_table`} AS x
       INNER JOIN (SELECT geo_type, geo_year, r_type, year, 
           MAX(batch_date) AS max_batch_date
-        FROM [PH_APDEStore].[metadata].[pop_etl_log]
+        FROM {`etl_schema`}.{`etl_table`}
         WHERE load_archive_datetime IS NULL AND load_ref_datetime IS NOT NULL
         GROUP BY geo_type, geo_scope, geo_year, r_type, year
         HAVING COUNT(id) > 1) AS y 
         ON x.geo_type = y.geo_type AND x.geo_year = y.geo_year 
           AND x.r_type = y.r_type AND x.year = y.year
-      INNER JOIN [PH_APDEStore].[metadata].[pop_etl_log] AS z
+      INNER JOIN {`etl_schema`}.{`etl_table`} AS z
         ON y.geo_type = z.geo_type AND y.geo_year = z.geo_year 
           AND y.r_type = z.r_type AND y.year = z.year 
           AND y.max_batch_date = z.batch_date
@@ -84,18 +87,21 @@ raw_archive_f <- function(
   conn,
   etl_batch_id) {
   
+  etl_schema <- config$etl_schema
+  etl_table <- config$etl_table
+  
   ### Determine if new data needs to go directly to archive
   to_archive <- DBI::dbGetQuery(conn, glue::glue_sql(
     "SELECT x.id AS 'archive_id', z.id AS 'ref_id', x.r_type
-      FROM [metadata].[pop_etl_log] AS x
+      FROM {`etl_schema`}.{`etl_table`} AS x
       INNER JOIN (SELECT geo_type, geo_year, r_type, year, 
           MAX(batch_date) AS max_batch_date
-        FROM [metadata].[pop_etl_log]
+        FROM [{`etl_schema`}.{`etl_table`}
         WHERE load_archive_datetime IS NULL AND load_ref_datetime IS NOT NULL
         GROUP BY geo_type, geo_scope, geo_year, r_type, year) AS y 
         ON x.geo_type = y.geo_type AND x.geo_year = y.geo_year 
           AND x.r_type = y.r_type AND x.year = y.year
-      INNER JOIN [metadata].[pop_etl_log] AS z
+      INNER JOIN {`etl_schema`}.{`etl_table`} AS z
         ON y.geo_type = z.geo_type AND y.geo_year = z.geo_year 
           AND y.r_type = z.r_type AND y.year = z.year 
           AND y.max_batch_date = z.batch_date
@@ -115,12 +121,16 @@ clean_archive_f <- function(
   conn,
   archive_schema,
   table_name) {
+  
+  etl_schema <- config$etl_schema
+  etl_table <- config$etl_table
+  
   to_delete <- DBI::dbGetQuery(conn, glue::glue_sql(
     "SELECT [id]
-    FROM [metadata].[pop_etl_log] x
+    FROM {`etl_schema`}.{`etl_table`} x
     INNER JOIN (SELECT [geo_type], [geo_scope], [geo_year], [year], [r_type], 
         MIN([batch_date]) AS 'min_batch'
-      FROM [metadata].[pop_etl_log]
+      FROM {`etl_schema`}.{`etl_table`}
       WHERE [load_archive_datetime] IS NOT NULL AND [delete_archive_datetime] IS NULL
       GROUP BY [geo_type], [geo_scope], [geo_year], [year], [r_type]
       HAVING COUNT(id) > 2) y ON x.[geo_type] = y.[geo_type] 

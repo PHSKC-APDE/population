@@ -19,8 +19,8 @@ create_etl_log_f <- function(
   create_id = T) {
   
   ### SET DATABASE SETTINGS
-  etl_schema <- "ref"
-  etl_table <- "metadata_pop_etl_log"
+  etl_schema <- config$etl_schema
+  etl_table <- config$etl_table
   
   ### CHECK FOR FAILED LOAD RAW ###
   ### Returns the ID if this file has already been at least partially loaded into raw
@@ -93,8 +93,8 @@ update_etl_log_datetime_f <- function(
   field) {
 
   ### SET DATABASE SETTINGS
-  etl_schema <- "ref"
-  etl_table <- "metadata_pop_etl_log"
+  etl_schema <- config$etl_schema
+  etl_table <- config$etl_table
   
   DBI::dbExecute(conn, glue::glue_sql(
     "UPDATE {`etl_schema`}.{`etl_table`}
@@ -111,8 +111,8 @@ qa_etl_f <- function(
   field = 0) {
   
   ### SET DATABASE SETTINGS
-  etl_schema <- "ref"
-  etl_table <- "metadata_pop_etl_log"
+  etl_schema <- config$etl_schema
+  etl_table <- config$etl_table
   
   if(field != 0) {
     DBI::dbExecute(conn, glue::glue_sql(
@@ -141,8 +141,8 @@ etl_log_notes_f <- function(
   display_only = F) {
   
   ### SET DATABASE SETTINGS
-  etl_schema <- "ref"
-  etl_table <- "metadata_pop_etl_log"
+  etl_schema <- config$etl_schema
+  etl_table <- config$etl_table
 
   note <- paste0(note, " (", Sys.time(), ")")
   
