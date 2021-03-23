@@ -14,7 +14,7 @@ process_data_f <- function(
   
   # Set path for 7-zip
   old_path <- Sys.getenv("PATH")
-  Sys.setenv(PATH = paste(old_path, "C:\\ProgramData\\Microsoft\\AppV\\Client\\Integration\\562FBB69-6389-4697-9A54-9FF814E30039\\Root\\VFS\\ProgramFilesX64\\7-Zip", sep = ";"))
+  Sys.setenv(PATH = paste(old_path, "C:\\Program Files\\7-Zip", sep = ";"))
   ### Create list of zip files with csvs in raw data folder
   zipped_files <- as.data.frame(list.files(paste0(path_raw, "/", f_load, "/files_to_load"), pattern = "\\.zip$", ignore.case = T))
   colnames(zipped_files)[1] = "filename"
@@ -71,7 +71,7 @@ process_data_f <- function(
                        ' -o"{path_tmp}"', 
                        ' -y',
                        ' "{glue_collapse(files_to_unzip, sep = \'" "\')}"'))
-      system2(command = "7z", args = c(z_args))
+      system2(command = "C:\Program Files\7-Zip\7z.exe", args = c(z_args))
       # Get a list of the unzipped files
       unzipped_files <- as.data.frame(list.files(path_tmp, pattern = "\\.csv$", ignore.case = T))
       # Look at one unzipped file at a time
