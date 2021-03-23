@@ -19,8 +19,8 @@ create_etl_log_f <- function(
   create_id = T) {
   
   ### SET DATABASE SETTINGS
-  etl_schema <- "metadata"
-  etl_table <- "pop_etl_log"
+  etl_schema <- "ref"
+  etl_table <- "metadata_pop_etl_log"
   
   ### CHECK FOR FAILED LOAD RAW ###
   ### Returns the ID if this file has already been at least partially loaded into raw
@@ -51,7 +51,7 @@ create_etl_log_f <- function(
   
   if (nrow(etl_batch_id) == 0) {
     sql_get <- glue::glue_sql(
-      "SELECT TOP (1) -999 FROM [metadata].[pop_etl_log]
+      "SELECT TOP (1) -999 FROM {`etl_schema`}.{`etl_table`}
       WHERE [load_archive_datetime] IS NOT NULL 
         AND [delete_archive_datetime] IS NULL
         AND [geo_type] = {geo_type} AND [geo_scope] = {geo_scope} 
@@ -93,8 +93,8 @@ update_etl_log_datetime_f <- function(
   field) {
 
   ### SET DATABASE SETTINGS
-  etl_schema <- "metadata"
-  etl_table <- "pop_etl_log"
+  etl_schema <- "ref"
+  etl_table <- "metadata_pop_etl_log"
   
   DBI::dbExecute(conn, glue::glue_sql(
     "UPDATE {`etl_schema`}.{`etl_table`}
@@ -111,8 +111,8 @@ qa_etl_f <- function(
   field = 0) {
   
   ### SET DATABASE SETTINGS
-  etl_schema <- "metadata"
-  etl_table <- "pop_etl_log"
+  etl_schema <- "ref"
+  etl_table <- "metadata_pop_etl_log"
   
   if(field != 0) {
     DBI::dbExecute(conn, glue::glue_sql(
@@ -141,8 +141,8 @@ etl_log_notes_f <- function(
   display_only = F) {
   
   ### SET DATABASE SETTINGS
-  etl_schema <- "metadata"
-  etl_table <- "pop_etl_log"
+  etl_schema <- "ref"
+  etl_table <- "metadata_pop_etl_log"
 
   note <- paste0(note, " (", Sys.time(), ")")
   

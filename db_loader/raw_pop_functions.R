@@ -40,9 +40,9 @@ clean_raw_r_f <- function(
   crosswalk <- DBI::dbGetQuery(conn, glue::glue_sql(
     "SELECT * FROM {`config$ref_schema`}.{`config$crosswalk_table`}",
     .con = conn))
-  hra <- DBI::dbGetQuery(conn, glue::glue_sql(
-    "SELECT * FROM {`config$ref_schema`}.{`config$hra_table`}",
-    .con = conn))
+#  hra <- DBI::dbGetQuery(conn, glue::glue_sql(
+#    "SELECT * FROM {`config$ref_schema`}.{`config$hra_table`}",
+#    .con = conn))
   
   ### CHANGE ORIGINAL COLUMN NAMES ###
   colnames(df) <- lapply(colnames(df), tolower)
@@ -164,20 +164,21 @@ clean_raw_r_f <- function(
   df <- select(df, -r)
   
   ### SET HRA ###
-  if(info$geo_type == 'blk') {
-    hra <- hra %>%
-      filter(geo_year == info$geo_year) %>%
-      select(-geo_year)
-    colnames(hra) <- c("geo_id", "hra_id")
-    df <- df %>%
-      left_join(hra)
-  }
+#  if(info$geo_type == 'blk') {
+#    hra <- hra %>%
+#      filter(geo_year == info$geo_year) %>%
+#      select(-geo_year)
+#    colnames(hra) <- c("geo_id", "hra_id")
+#    df <- df %>%
+#      left_join(hra)
+#  }
   
   ### ORDER COLUMNS ###
   df <- df[, c("geo_type", "geo_scope", "geo_year", "year", 
-                             "r_type", "geo_id", "age", "age5", "age11", "age20", 
-                             "s", "h", "rcode", "r1_3", "r2_4", "pop", "fips_co", 
-                             "agestr", "gender","racemars", "hispanic", "hra_id")]
+               "r_type", "geo_id", "age", "age5", "age11", "age20",
+               "s", "h", "rcode", "r1_3", "r2_4", "pop", "fips_co", 
+               "agestr", "gender","racemars", "hispanic")]
+#               "agestr", "gender","racemars", "hispanic", "hra_id")]
   
   ### SET ETL_BATCH_ID AND ID IF PRESENT ###
   if (etl_batch_id > 0) {

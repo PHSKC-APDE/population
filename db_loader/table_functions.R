@@ -5,8 +5,47 @@
 # 2020-12
 
 ### FUNCTION TO CREATE DATABASE CONNECTION
-create_conn_f <-function() {
-  conn <- DBI::dbConnect(odbc::odbc(), "PH_APDEStore51")
+create_conn_f <-function(server = c("APDEStore", "hhsaw"),
+                         prod = T,
+                         interactive = F) {
+  
+  server <- match.arg(server)
+  
+  if (server == "hhsaw") {
+    db_name <- "hhs_analytics_workspace"
+  } else if (server == "inthealth") {
+    db_name <- "inthealth_edw"
+  }
+  
+  if (prod == T & server %in% c("hhsaw")) {
+    server_name <- "tcp:kcitazrhpasqlprp16.azds.kingcounty.gov,1433"
+  } else {
+    server_name <- "tcp:kcitazrhpasqldev20.database.windows.net,1433"
+  }
+  
+  if (server == "APDEStores") {
+    conn <- DBI::dbConnect(odbc::odbc(), "PH_APDEStore51")
+  } else if (interactive == F) {
+    conn <- DBI::dbConnect(odbc::odbc(),
+                           driver = "ODBC Driver 17 for SQL Server",
+                           server = server_name,
+                           database = db_name,
+                           uid = keyring::key_list("hhsaw_dev")[["username"]],
+                           pwd = keyring::key_get("hhsaw_dev", keyring::key_list("hhsaw_dev")[["username"]]),
+                           Encrypt = "yes",
+                           TrustServerCertificate = "yes",
+                           Authentication = "ActiveDirectoryPassword")
+  } else if (interactive == T) {
+    conn <- DBI::dbConnect(odbc::odbc(),
+                           driver = "ODBC Driver 17 for SQL Server",
+                           server = server_name,
+                           database = db_name,
+                           uid = keyring::key_list("hhsaw_dev")[["username"]],
+                           Encrypt = "yes",
+                           TrustServerCertificate = "yes",
+                           Authentication = "ActiveDirectoryInteractive")
+  }
+  
   return(conn)
 }
 

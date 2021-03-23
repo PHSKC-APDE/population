@@ -371,7 +371,9 @@ select_process_data_f <- function(){
   ###   Example: SQL Connection Error
   repeat {
     message(paste0("Try #", trynum))
-    conn <- create_conn_f()
+    conn <- create_conn_f(server = server,
+                          prod = F,
+                          interactive = T)
     complete <- tryCatch(process_data_f(conn = conn, 
                                      path_raw = path_raw, 
                                      path_tmp = path_tmp, 
