@@ -68,7 +68,7 @@ process_data_f <- function(
                               note = "Unzipping files"))
       # Unzip zip file to the tmp folder
       z_args <- c(glue(' e "{paste0(path_raw, "/", f_load, "/files_to_load/", zipped_files[z,])}"', 
-                       ' -o "{path_tmp}"', 
+                       ' -o"{path_tmp}"', 
                        ' -y',
                        ' "{glue_collapse(files_to_unzip, sep = \'" "\')}"'))
       system2(command = "7z", args = c(z_args))
