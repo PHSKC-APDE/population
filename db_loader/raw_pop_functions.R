@@ -22,9 +22,10 @@ load_raw_f <- function(
                          FROM {`schema_name`}.{`table_name`}
                          WHERE etl_batch_id = {etl_batch_id}",
                                 .con = conn))
-  data_loaded$rows <- nrow(pop_load)
-  data_loaded$pop <- as.numeric(pop_load %>% summarize_at(vars(pop), list(tot_pop = sum)))
-  
+  data_loaded <- list(rows = nrow(pop_load), 
+                      pop == as.numeric(pop_load %>% 
+                                          summarize_at(vars(pop), 
+                                                       list(tot_pop = sum))))
   return(data_loaded)
 }
 
