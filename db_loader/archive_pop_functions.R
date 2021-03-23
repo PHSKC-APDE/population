@@ -96,7 +96,7 @@ raw_archive_f <- function(
       FROM {`etl_schema`}.{`etl_table`} AS x
       INNER JOIN (SELECT geo_type, geo_year, r_type, year, 
           MAX(batch_date) AS max_batch_date
-        FROM [{`etl_schema`}.{`etl_table`}
+        FROM {`etl_schema`}.{`etl_table`}
         WHERE load_archive_datetime IS NULL AND load_ref_datetime IS NOT NULL
         GROUP BY geo_type, geo_scope, geo_year, r_type, year) AS y 
         ON x.geo_type = y.geo_type AND x.geo_year = y.geo_year 
