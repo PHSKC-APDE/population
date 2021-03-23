@@ -372,7 +372,7 @@ select_process_data_f <- function(){
   repeat {
     message(paste0("Try #", trynum))
     conn <- create_conn_f(server = server,
-                          prod = F,
+                          prod = prod_serv,
                           interactive = T)
     complete <- tryCatch(process_data_f(conn = conn, 
                                      path_raw = path_raw, 
@@ -402,6 +402,10 @@ load_data_f <- function(conn,
   
   ### Begin data loading loop
   for( d in 1:d_stop) {
+    ### Re-establishing the database connection
+    conn <- create_conn_f(server = server,
+                          prod = prod_serv,
+                          interactive = T)
     d_start <- ((d - 1) * inc) + 1
     d_end <- d * inc
     if (d_end > nrow(data)) { d_end <- nrow(data) }

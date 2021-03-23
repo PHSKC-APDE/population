@@ -2,7 +2,7 @@
 ### FUNCTION TO SELECT BATCH AND START THE QA PROCESS
 select_qa_data_f <- function(){
   conn <- create_conn_f(server = server,
-                        prod = F,
+                        prod = prod_serv,
                         interactive = T)
   qa_config <- yaml::yaml.load(httr::GET("https://raw.githubusercontent.com/PHSKC-APDE/population/master/config/qa.pop.yaml"))
   # List of folders that have raw data
@@ -137,7 +137,7 @@ select_qa_data_f <- function(){
 
 create_qa_pop_f <- function(){
   conn <- create_conn_f(server = server,
-                        prod = F,
+                        prod = prod_serv,
                         interactive = T)
   qa_config <- yaml::yaml.load(httr::GET("https://raw.githubusercontent.com/PHSKC-APDE/population/master/config/qa.pop.yaml"))
   schema_name <- qa_config$schema_name

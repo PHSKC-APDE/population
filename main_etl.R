@@ -37,8 +37,12 @@ in_geo_types <- c("zip") # c("blk", "blkg", "cou", "lgd", "scd", "ste", "trc", "
 min_year <- 2000
 memory.limit(size = 56000)
 
-### Select the server to use
+### SELECT SERVER TO USE
 server <- select.list(choices = c("APDEStore", "hhsaw"))
+if (server == "hhsaw") {
+  ### USE PRODUCTION SERVER?
+  prod_serv <- select.list(choices = c(T, F))
+}
 
 ### Select the folder to qa data against what is in the database
 select_qa_data_f()
