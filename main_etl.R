@@ -17,6 +17,7 @@ library(dplyr)
 library(survPen)
 library(reticulate)
 library(stringr)
+library(keyring)
 library(xlsx)
 
 ### LOAD FUNCTIONS
@@ -38,10 +39,13 @@ min_year <- 2000
 memory.limit(size = 56000)
 
 ### SELECT SERVER TO USE
+message("SELECT SERVER")
 server <- select.list(choices = c("APDEStore", "hhsaw"))
 if (server == "hhsaw") {
   ### USE PRODUCTION SERVER?
-  prod_serv <- select.list(choices = c(T, F))
+  message("USE PRODUCTION SERVER")
+  prod_serv <- T
+  #prod_serv <- select.list(choices = c(T, F))
 }
 
 ### Select the folder to qa data against what is in the database
