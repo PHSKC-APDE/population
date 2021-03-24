@@ -282,7 +282,7 @@ process_data_f <- function(
   message(etl_log_notes_f(conn = conn, batch_name = f_load,
                           note = paste0("Batch load complete - ", 
                                         round(etime - stime, 2),
-                                        " minutes")))
+                                        " hours")))
   ### Return TRUE if process completed fully, else the function will loop and try again
   return(T)
 }

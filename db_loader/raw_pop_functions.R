@@ -15,6 +15,9 @@ load_raw_f <- function(
   ### LOAD DATA TO REF
   load_data_f(conn, data, schema_name, table_name)
   
+  conn <- create_conn_f(server = server,
+                        prod = prod_serv,
+                        interactive = T)
   ### GETS NUMBER OF ROWS LOADED TO SQL AND RETURNS THE NUMBER
   pop_load <- DBI::dbGetQuery(conn, 
                               glue::glue_sql(
@@ -23,9 +26,9 @@ load_raw_f <- function(
                          WHERE etl_batch_id = {etl_batch_id}",
                                 .con = conn))
   data_loaded <- list(rows = nrow(pop_load), 
-                      pop = as.numeric(pop_load %>% 
+                      pop = round(as.numeric(pop_load %>% 
                                           summarize_at(vars(pop), 
-                                                       list(tot_pop = sum))))
+                                                       list(tot_pop = sum))), 4))
   return(data_loaded)
 }
 
