@@ -46,6 +46,10 @@ if (server == "hhsaw") {
   message("USE PRODUCTION SERVER")
   prod_serv <- T
   #prod_serv <- select.list(choices = c(T, F))
+  ### USE Interactive Authentication?
+  int_auth <- F
+  #int_auth <- select.list(choices = c(T, F))
+  
 }
 
 ### Select the folder to qa data against what is in the database

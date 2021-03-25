@@ -373,7 +373,7 @@ select_process_data_f <- function(){
     message(paste0("Try #", trynum))
     conn <- create_conn_f(server = server,
                           prod = prod_serv,
-                          interactive = T)
+                          interactive = int_auth)
     complete <- tryCatch(process_data_f(conn = conn, 
                                      path_raw = path_raw, 
                                      path_tmp = path_tmp, 
@@ -405,7 +405,7 @@ load_data_f <- function(conn,
     ### Re-establishing the database connection
     conn <- create_conn_f(server = server,
                           prod = prod_serv,
-                          interactive = T)
+                          interactive = int_auth)
     d_start <- ((d - 1) * inc) + 1
     d_end <- d * inc
     if (d_end > nrow(data)) { d_end <- nrow(data) }
@@ -413,9 +413,12 @@ load_data_f <- function(conn,
                   name = DBI::Id(schema = schema_name, table = table_name), 
                   value = data[d_start:d_end,])  
     message(paste0("...Loading Progress - ", round((d / d_stop) * 100, 2), "%"))
+    conn <- create_conn_f(server = server,
+                          prod = prod_serv,
+                          interactive = int_auth)
   }
   rm(d, d_start, d_end, d_stop, inc)
   conn <- create_conn_f(server = server,
                         prod = prod_serv,
-                        interactive = T)
+                        interactive = int_auth)
 }
