@@ -415,4 +415,7 @@ load_data_f <- function(conn,
     message(paste0("...Loading Progress - ", round((d / d_stop) * 100, 2), "%"))
   }
   rm(d, d_start, d_end, d_stop, inc)
+  conn <- create_conn_f(server = server,
+                        prod = prod_serv,
+                        interactive = T)
 }
