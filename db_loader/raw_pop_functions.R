@@ -15,9 +15,8 @@ load_raw_f <- function(
   ### LOAD DATA TO REF
   load_data_f(conn, data, schema_name, table_name)
   
-  conn <- create_conn_f(server = server,
-                        prod = prod_serv,
-                        interactive = int_auth)
+  create_conn_f(server = server,
+                prod = prod_serv)
   ### GETS NUMBER OF ROWS LOADED TO SQL AND RETURNS THE NUMBER
   pop_load <- DBI::dbGetQuery(conn, 
                               glue::glue_sql(

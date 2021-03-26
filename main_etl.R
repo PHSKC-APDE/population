@@ -34,7 +34,7 @@ config <- yaml::yaml.load(httr::GET("https://raw.githubusercontent.com/PHSKC-APD
 path_raw <- config[["path_raw"]]
 path_tmp <-  config[["path_tmp"]]
 path_tmptxt <-  paste0(path_raw, "/tmp")
-in_geo_types <- c("zip") # c("blk", "blkg", "cou", "lgd", "scd", "ste", "trc", "zip")
+in_geo_types <- c("blk", "scd", "zip") # c("blk", "blkg", "cou", "lgd", "scd", "ste", "trc", "zip")
 min_year <- 2000
 memory.limit(size = 56000)
 
@@ -43,13 +43,11 @@ message("SELECT SERVER")
 server <- select.list(choices = c("APDEStore", "hhsaw"))
 if (server == "hhsaw") {
   ### USE PRODUCTION SERVER?
-  message("USE PRODUCTION SERVER")
-  prod_serv <- T
-  #prod_serv <- select.list(choices = c(T, F))
+  message("USE PRODUCTION SERVER?")
+  prod_serv <- select.list(choices = c(T, F))
   ### USE Interactive Authentication?
-  int_auth <- F
-  #int_auth <- select.list(choices = c(T, F))
-  
+  message("USE INTERACTIVE AUTHENTICATION?")
+  int_auth <- select.list(choices = c(T, F))
 }
 
 ### Select the folder to qa data against what is in the database

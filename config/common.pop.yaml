@@ -1,7 +1,7 @@
 raw_schema: raw
 ref_schema: ref
 archive_schema: archive
-table_name: pop
+table_name: popx
 etl_schema: ref
 etl_table: metadata_pop_etl_log
 crosswalk_table: pop_crosswalk
