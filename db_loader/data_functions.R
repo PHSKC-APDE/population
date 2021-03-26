@@ -214,7 +214,20 @@ process_data_f <- function(
                                    etl_batch_id = etl_batch_id)
             }
           }
-
+          if(is.na(load_results) == T) {
+            pop_load <- DBI::dbGetQuery(conn, 
+                                        glue::glue_sql(
+                                          "SELECT pop
+                         FROM {`schema_name`}.{`table_name`}
+                         WHERE etl_batch_id = {etl_batch_id}",
+                                          .con = conn))
+            load_results <- list(rows = nrow(pop_load), 
+                                pop = round(as.numeric(
+                                  pop_load %>% 
+                                    summarize_at(vars(pop), 
+                                                 list(tot_pop = sum))), 4))  
+          }
+          
           ### Record number of rows and total pop loaded
           qa_etl_f(conn = conn, etl_batch_id = etl_batch_id,
                    qa_val = load_results$rows, "qa_rows_load")
@@ -383,7 +396,7 @@ select_process_data_f <- function(){
                            print(paste0("ERROR: ",err))
                          })
     trynum <- trynum + 1
-    if (complete == T | trynum > 2) { break }
+    if (complete == T | trynum > 10) { break }
   }
   ### ADD INDEX TO REF
   #add_index_f(conn = conn, schema = pop_config$ref_schema, 
