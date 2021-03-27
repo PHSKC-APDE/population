@@ -214,7 +214,7 @@ process_data_f <- function(
                                    etl_batch_id = etl_batch_id)
             }
           }
-          if(is.na(load_results) == T) {
+          if(!exists("load_results")) {
             pop_load <- DBI::dbGetQuery(conn, 
                                         glue::glue_sql(
                                           "SELECT pop
