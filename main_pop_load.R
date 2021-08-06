@@ -26,16 +26,17 @@ library(zip)
 library(curl)
 library(jsonlite)
 
-source("C:/Users/jwhitehurst/OneDrive - King County/GitHub/apde/R/create_db_connection.R")
-source("C:/Users/jwhitehurst/OneDrive - King County/GitHub/apde/R/create_table.R")
-source("C:/Users/jwhitehurst/OneDrive - King County/GitHub/apde/R/copy_into.R")
-source("C:/Users/jwhitehurst/OneDrive - King County/GitHub/apde/R/load_table_from_file.R")
-source("C:/Users/jwhitehurst/OneDrive - King County/GitHub/population/db_loader/raw_pop_functions.R")
-source("C:/Users/jwhitehurst/OneDrive - King County/GitHub/population/db_loader/stage_pop_functions.R")
-source("C:/Users/jwhitehurst/OneDrive - King County/GitHub/population/db_loader/archive_pop_functions.R")
-source("C:/Users/jwhitehurst/OneDrive - King County/GitHub/population/db_loader/data_functions.R")
-source("C:/Users/jwhitehurst/OneDrive - King County/GitHub/population/db_loader/table_functions.R")
-source("C:/Users/jwhitehurst/OneDrive - King County/GitHub/population/db_loader/etl_log.R")
+
+devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/apde/master/R/create_table.R")
+devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/apde/master/R/load_table_from_file.R")
+devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/master/db_loader/copy_into.R")
+devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/master/db_loader/create_db_connection.R")
+devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/master/db_loader/raw_pop_functions.R")
+devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/master/db_loader/stage_pop_functions.R")
+devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/master/db_loader/archive_pop_functions.R")
+devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/master/db_loader/data_functions.R")
+devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/master/db_loader/table_functions.R")
+devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/master/db_loader/etl_log.R")
 
 #### SELECT CONNECTION TYPE ####
 server <- dlg_list(c("APDEStore", "hhsaw"), title = "Select Server")$res
@@ -52,8 +53,8 @@ conn_db <- create_db_connection(server, interactive = interactive_auth, prod = p
 conn_dw <- create_db_connection(server_dw, interactive = interactive_auth, prod = prod)
 
 #### CONFIG FILES ####
-popconfig <- yaml::yaml.load_file("C:/Users/jwhitehurst/OneDrive - King County/GitHub/population/config/common.pop.yaml")
-rawconfig <- yaml::yaml.load_file("C:/Users/jwhitehurst/OneDrive - King County/GitHub/population/config/raw.pop.yaml")
+popconfig <- yaml::read_yaml("https://raw.githubusercontent.com/PHSKC-APDE/population/master/config/common.pop.yaml")
+rawconfig <- yaml::read_yaml("https://raw.githubusercontent.com/PHSKC-APDE/population/master/config/raw.pop.yaml")
 
 #### DEFINE LOADING VARIABLES ####
 in_geo_types <- dlg_list(c("blk", "blkg", "cou", "lgd", "scd", "ste", "trc", "zip"), 

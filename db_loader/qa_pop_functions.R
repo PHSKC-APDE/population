@@ -9,7 +9,7 @@ qa_raw_files_f <- function(server = "hhsaw",
                            df_only = F){
   
   conn <- create_db_connection(server = server, prod = prod, interactive = interactive)
-  qa_config <- yaml::yaml.load_file("C:/Users/jwhitehurst/OneDrive - King County/GitHub/population/config/qa.pop.yaml")
+  qa_config <- yaml::read_yaml("https://raw.githubusercontent.com/PHSKC-APDE/population/master/config/qa.pop.yaml")
   
   files <- data.frame(matrix(ncol = 6, nrow = 0))
   colnames(files) <- c("file_name", "geo_type", "geo_scope", "geo_year", "year", "r_type")
@@ -89,7 +89,7 @@ qa_raw_files_f <- function(server = "hhsaw",
 }
 
 create_qa_pop_f <- function(conn){
-  qa_config <- yaml::yaml.load_file("C:/Users/jwhitehurst/OneDrive - King County/GitHub/population/config/qa.pop.yaml")
+  qa_config <- yaml::read_yaml("https://raw.githubusercontent.com/PHSKC-APDE/population/master/config/qa.pop.yaml")
   schema_name <- qa_config$schema_name
   qa_table <-  qa_config$table_name
   ref_table <- substring(qa_table, 1, 3)

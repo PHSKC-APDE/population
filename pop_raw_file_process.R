@@ -27,10 +27,10 @@ library(curl)
 library(xlsx)
 library(jsonlite)
 
-source("C:/Users/jwhitehurst/OneDrive - King County/GitHub/apde/R/create_db_connection.R")
-source("C:/Users/jwhitehurst/OneDrive - King County/GitHub/population/db_loader/raw_pop_functions.R")
-source("C:/Users/jwhitehurst/OneDrive - King County/GitHub/population/db_loader/qa_pop_functions.R")
-source("C:/Users/jwhitehurst/OneDrive - King County/GitHub/population/db_loader/etl_log.R")
+devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/master/db_loader/create_db_connection.R")
+devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/master/db_loader/raw_pop_functions.R")
+devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/master/db_loader/qa_pop_functions.R")
+devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/master/db_loader/etl_log.R")
 
 #### USER DEFINED SETTINGS ####
 temp_base <- "C:/temp"
@@ -46,8 +46,8 @@ min_year <- 2000
 etl_only <- T
 
 #### CONFIG FILES ####
-config <- yaml::yaml.load_file("C:/Users/jwhitehurst/OneDrive - King County/GitHub/population/config/common.pop.yaml")
-rawconfig <- yaml::yaml.load_file("C:/Users/jwhitehurst/OneDrive - King County/GitHub/population/config/raw.pop.yaml")
+config <- yaml::read_yaml("https://raw.githubusercontent.com/PHSKC-APDE/population/master/config/common.pop.yaml")
+rawconfig <- yaml::read_yaml("https://raw.githubusercontent.com/PHSKC-APDE/population/master/config/raw.pop.yaml")
 
 if(etl_only == F) {
   #### UNZIP FILES ####
@@ -112,8 +112,8 @@ if(etl_only == F) {
   #### LOAD TO AZURE ####
   blob_token <- AzureAuth::get_azure_token(
     resource = "https://storage.azure.com", 
-    tenant = "bae5059a-76f0-49d7-9996-72dfe95d69c7",
-    app = "dd6d23ef-0676-46b4-9e27-d867c1401839",
+    tenant = keyring::key_get("adl_tenant", "dev"),
+    app = keyring::key_get("adl_app", "dev"),
     auth_type = "authorization_code",
     use_cache = F
   )
