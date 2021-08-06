@@ -1,0 +1,33 @@
+APDEStore:
+  field_term: \,
+  row_term: \n
+  base_url: 
+  base_path: //phdata01/DROF_DATA/DOH DATA/POP/data/gz
+  db_name: PH_APDEStore
+  server_path: KCITSQLUTPDBH51
+hhsaw:
+  base_url: https://inthealthdtalakegen2.dfs.core.windows.net/inthealth/
+  base_path: apde/pop
+  db_name: inthealth_edw
+vars:
+  col1: VARCHAR(255)
+  col2: VARCHAR(255)
+  col3: VARCHAR(255)
+  col4: VARCHAR(255)
+  col5: VARCHAR(255)
+  col6: VARCHAR(255)
+  col7: VARCHAR(255)
+vars_add:
+  raw_agestr: VARCHAR(7)
+  raw_gender: VARCHAR(1)
+  raw_racemars: VARCHAR(15)
+  raw_hispanic: VARCHAR(1)
+  etl_batch_id: INTEGER
+  geo_type: VARCHAR(5)
+  geo_scope: VARCHAR(4)
+  geo_year: VARCHAR(4)
+  year: VARCHAR(4)
+  r_type: SMALLINT
+  geo_id: VARCHAR(15)
+  pop: FLOAT
+  fips_co: SMALLINT

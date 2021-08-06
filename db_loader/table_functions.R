@@ -8,9 +8,7 @@
 create_conn_f <-function(server = c("APDEStore", "hhsaw"),
                          prod = T,
                          interactive = F) {
-  
-  server <- match.arg(server)
-  
+
   if (server == "hhsaw") {
     db_name <- "hhs_analytics_workspace"
   } else if (server == "inthealth") {
@@ -23,7 +21,7 @@ create_conn_f <-function(server = c("APDEStore", "hhsaw"),
     server_name <- "tcp:kcitazrhpasqldev20.database.windows.net,1433"
   }
   
-  if (server == "APDEStores") {
+  if (server == "APDEStore") {
     conn <- DBI::dbConnect(odbc::odbc(), "PH_APDEStore51")
   } else if (interactive == F) {
     conn <- DBI::dbConnect(odbc::odbc(),

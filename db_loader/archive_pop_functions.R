@@ -8,19 +8,25 @@
 
 #### FUNCTION TO ARCHIVE OLD DATA ####
 load_archive_f <- function(
-  conn,
+  server,
+  config = NULL,
+  prod = F,
+  interactive_auth = F,
   archive_schema,
+  archive_table,
   ref_schema,
-  table_name) {
-  ### Determine if there is old data in ref that needs to be archived
-  etl_schema <- config$etl_schema
-  etl_table <- config$etl_table
+  ref_table,
+  etl_schema,
+  etl_table) {
   
-  to_archive <- DBI::dbGetQuery(conn, glue::glue_sql(
-    "SELECT x.id AS 'archive_id', z.id AS 'ref_id'
+  conn_db <- create_db_connection(server, interactive = interactive_auth, prod = prod)
+  
+  ### Determine if there is old data in ref that needs to be archived
+  to_archive <- DBI::dbGetQuery(conn_db, glue::glue_sql(
+    "SELECT x.id AS 'archive_id', z.id AS 'ref_id', x.r_type
       FROM {`etl_schema`}.{`etl_table`} AS x
       INNER JOIN (SELECT geo_type, geo_year, r_type, year, 
-          MAX(batch_date) AS max_batch_date
+          MAX(batch_date) AS max_batch_date, MIN(batch_date) AS min_batch_date
         FROM {`etl_schema`}.{`etl_table`}
         WHERE load_archive_datetime IS NULL AND load_ref_datetime IS NOT NULL
         GROUP BY geo_type, geo_scope, geo_year, r_type, year
@@ -31,55 +37,43 @@ load_archive_f <- function(
         ON y.geo_type = z.geo_type AND y.geo_year = z.geo_year 
           AND y.r_type = z.r_type AND y.year = z.year 
           AND y.max_batch_date = z.batch_date
-      WHERE x.batch_date <> y.max_batch_date",
-    .con = conn))
+      WHERE x.batch_date = y.min_batch_date",
+    .con = conn_db))
+  DBI::dbDisconnect(conn_db)
   ### Archive the old data and remove from ref
   if (nrow(to_archive) > 0) {
     for (a in 1:nrow(to_archive)) {
-      message(
-        etl_log_notes_f(conn = conn,
-                      etl_batch_id = to_archive[a,2],
-                      note = paste0("Begin archiving old data from ETL Batch ID ", to_archive[a,1])))
-      message(paste0("ETL Batch ID - ", to_archive[a,1], ": ",
-        etl_log_notes_f(conn = conn, 
-                        etl_batch_id = to_archive[a,1],
-                        note = paste0("Moving old data from ", ref_schema, ".", 
-                                      table_name, " to ", archive_schema, ".", 
-                                      table_name, " for ETL Batch ID ", 
-                                      to_archive[a,2]),
-                        full_msg = F)))
-      data_move_r_f(conn = conn, to_schema = archive_schema, 
-                    from_schema = ref_schema, table_name = table_name, 
-                    etl_batch_id = to_archive[a,1])
-      update_etl_log_datetime_f(
-        conn = conn, 
-        etl_batch_id = to_archive[a, 1],
-        field = "load_archive_datetime")
-      message(paste0("ETL Batch ID - ", to_archive[a,1], ": ",
-        etl_log_notes_f(conn = conn, 
-                        etl_batch_id = to_archive[a,1],
-                        note = paste0("Old data loaded to ", archive_schema, ".", 
-                                      table_name),
-                        full_msg = F)))
-      
-      update_etl_log_datetime_f(
-        conn = conn, 
-        etl_batch_id = to_archive[a, 1],
-        field = "delete_ref_datetime")
-      message(paste0("ETL Batch ID - ", to_archive[a,1], ": ",
-        etl_log_notes_f(conn = conn, 
-                        etl_batch_id = to_archive[a,1],
-                        note = paste0("Old data deleted from ", ref_schema, ".", 
-                                      table_name),
-                        full_msg = F)))
-      message(
-        etl_log_notes_f(conn = conn,
-                        etl_batch_id = to_archive[a,2],
-                        note = paste0("Archiving old data from ETL Batch ID ", 
-                                      to_archive[a,1], " complete")))
+      conn_db <- create_db_connection(server, interactive = interactive_auth, prod = prod)
+      if (to_archive$r_type[a] == 77) { 
+        from_table <- paste0(ref_table, "_77")
+        to_table <- paste0(archive_table, "_77")
+      } else { 
+        from_table <- ref_table 
+        to_table <- archive_table 
+      }
+      message(glue("ETL Batch ID - {to_archive$archive_id[a]}: Moving Data from Ref Table ({ref_schema}.{from_table}) to Archive Table ({archive_schema}.{to_table}) - {format(Sys.time(), '%Y-%m-%d %H:%M:%S')}"))
+      data_move_f(conn = conn_db,
+                  from_schema = ref_schema,
+                  to_schema = archive_schema,
+                  from_table = from_table,
+                  to_table = to_table,
+                  del_to = T,
+                  del_from = T,
+                  etl_batch_id = to_archive[a,1])
+      update_etl_log_datetime_f(conn = conn_db, 
+                                etl_batch_id =  to_archive$archive_id[a],
+                                etl_schema = ref_schema, 
+                                etl_table = etl_table,
+                                field = "load_archive_datetime")
+      update_etl_log_datetime_f(conn = conn_db, 
+                                etl_batch_id =  to_archive$archive_id[a],
+                                etl_schema = ref_schema, 
+                                etl_table = etl_table,
+                                field = "delete_ref_datetime")
+      DBI::dbDisconnect(conn_db)
     }
   }
-  clean_archive_f(conn, archive_schema, table_name)
+  
 }
 
 #### FUNCTION TO SEND RAW DATA DIRECTLY TO ARCHIVE ####
@@ -118,47 +112,56 @@ raw_archive_f <- function(
 
 #### FUNCTION TO DELETE OLD ARCHIVE DATA ####
 clean_archive_f <- function(
-  conn,
+  server,
+  config = NULL,
+  prod = F,
+  interactive_auth = F,
   archive_schema,
-  table_name) {
+  archive_table,
+  etl_schema,
+  etl_table,
+  max_archive = 2) {
   
-  etl_schema <- config$etl_schema
-  etl_table <- config$etl_table
+  if(server_dw == "APDEStore") { 
+    tablock <- "WITH (TABLOCK) " 
+  } else { 
+    tablock <- "" 
+  }
   
-  to_delete <- DBI::dbGetQuery(conn, glue::glue_sql(
-    "SELECT [id]
+  conn_db <- create_db_connection(server, interactive = interactive_auth, prod = prod)
+  
+  to_delete <- DBI::dbGetQuery(conn_db, glue::glue_sql(
+    "SELECT x.id, x.r_type
     FROM {`etl_schema`}.{`etl_table`} x
-    INNER JOIN (SELECT [geo_type], [geo_scope], [geo_year], [year], [r_type], 
-        MIN([batch_date]) AS 'min_batch'
+    INNER JOIN (SELECT geo_type, geo_scope, geo_year, year, r_type, 
+        MIN(batch_date) AS 'min_batch'
       FROM {`etl_schema`}.{`etl_table`}
-      WHERE [load_archive_datetime] IS NOT NULL AND [delete_archive_datetime] IS NULL
-      GROUP BY [geo_type], [geo_scope], [geo_year], [year], [r_type]
-      HAVING COUNT(id) > 2) y ON x.[geo_type] = y.[geo_type] 
-        AND x.[geo_scope] = y.[geo_scope] AND x.[geo_year] = y.[geo_year] 
-        AND x.[year] = y.[year] AND x.[r_type] = y.r_type 
-        AND x.[batch_date] = y.min_batch",
-    .con = conn))
+      WHERE load_archive_datetime IS NOT NULL AND delete_archive_datetime IS NULL
+      GROUP BY geo_type, geo_scope, geo_year, year, r_type
+      HAVING COUNT(id) > {max_archive}) y ON x.geo_type = y.geo_type 
+        AND x.geo_scope = y.geo_scope AND x.geo_year = y.geo_year 
+        AND x.year = y.year AND x.r_type = y.r_type 
+        AND x.batch_date = y.min_batch",
+    .con = conn_db))
+  DBI::dbDisconnect(conn_db)
   ### Archive the old data and remove from ref
   if (nrow(to_delete) > 0) {
     for (a in 1:nrow(to_delete)) {
-      message(paste0("ETL Batch ID - ", to_delete[a,1], ": ",
-                     etl_log_notes_f(conn = conn, 
-                                     etl_batch_id = to_delete[a,1],
-                                     note = paste0("Deleting old data from archive.", table_name),
-                                     full_msg = F)))
-      DBI::dbExecute(conn, glue_sql("DELETE FROM {`archive_schema`}.{`table_name`} WITH (TABLOCK)
-           WHERE etl_batch_id = {to_delete[a,1]}", .con = conn))
-      update_etl_log_datetime_f(
-        conn = conn, 
-        etl_batch_id = to_delete[a, 1],
-        field = "delete_archive_datetime")
-      message(paste0("ETL Batch ID - ", to_delete[a,1], ": ",
-                     etl_log_notes_f(conn = conn, 
-                                     etl_batch_id = to_delete[a,1],
-                                     note = paste0("Old data deleted from archive.", table_name),
-                                     full_msg = F)))
+      conn_db <- create_db_connection(server, interactive = interactive_auth, prod = prod)
+      if (to_delete$r_type[a] == 77) { 
+        del_table <- paste0(archive_table, "_77")
+      } else { 
+        del_table <- archive_table 
+      }
+      message(glue("ETL Batch ID - {to_delete$id[a]}: Deleting Old Data from Archive Table ({archive_schema}.{del_table}) - {format(Sys.time(), '%Y-%m-%d %H:%M:%S')}"))
+      DBI::dbExecute(conn_db, glue_sql("DELETE FROM {`archive_schema`}.{`del_table`} {DBI::SQL(tablock)}
+           WHERE etl_batch_id = {to_delete$id[a]}", .con = conn_db))
+      update_etl_log_datetime_f(conn = conn_db, 
+                                etl_batch_id =  to_delete$id[a],
+                                etl_schema = etl_schema, 
+                                etl_table = etl_table,
+                                field = "delete_archive_datetime")
+      DBI::dbDisconnect(conn_db)
     }
-    return(T)
   }
-  return(F)
 }

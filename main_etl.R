@@ -19,6 +19,7 @@ library(reticulate)
 library(stringr)
 library(keyring)
 library(xlsx)
+library(svDialogs)
 
 ### LOAD FUNCTIONS
 devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/master/db_loader/etl_log.R")

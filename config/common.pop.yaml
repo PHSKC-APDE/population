@@ -1,18 +1,27 @@
-raw_schema: raw
-ref_schema: ref
-archive_schema: archive
-table_name: pop
-etl_schema: ref
-etl_table: metadata_pop_etl_log
+APDEStore:
+  raw_schema: raw
+  stage_schema: stage
+  ref_schema: ref
+  archive_schema: archive
+  table_name: popx
+  raw_prefix: 
+  stage_prefix:
+  archive_prefix:
+hhsaw:
+  raw_schema: stg_reference
+  stage_schema: stg_reference
+  ref_schema: ref
+  archive_schema: ref
+  table_name: pop
+  raw_prefix: 
+  stage_prefix: stage_
+  archive_prefix: archive_
+etl_table: popx_metadata_etl_log
 crosswalk_table: pop_crosswalk
 hra_table: pop_hra_blk_crosswalk
 label_table: pop_labels
-path_raw: //phdata01/DROF_DATA/DOH DATA/POP/data/raw
-path_tmp: C:/temp/pop
 index_type: ccs
-index_name: idx_ccs_ref_pop
-field_term: \t
-row_term: \n
+index_name: idx_ccs_ref_popx
 max_archive: 2
 geo_type:
   block: blk
@@ -22,7 +31,7 @@ geo_type:
   schooldist: scd
   state: ste
   tract: trc
-  zipcode: zip
+  zip: zip
 geo_scope:
   blk: kps
   blkg: kps
@@ -32,3 +41,32 @@ geo_scope:
   ste: wa
   trc: wa
   zip: wa
+vars:
+  etl_batch_ID: INTEGER
+  geo_type: VARCHAR(5)
+  geo_scope: VARCHAR(4)
+  geo_year: VARCHAR(4)
+  year: VARCHAR(4)
+  r_type: SMALLINT
+  geo_id: VARCHAR(15)
+  age: SMALLINT
+  age_5: SMALLINT
+  age_11: SMALLINT
+  age_20: SMALLINT
+  gender: SMALLINT
+  pop: FLOAT
+  race_wht: BIT
+  race_blk: BIT
+  race_aian: BIT
+  race_as: BIT
+  race_nhpi: BIT
+  race_hisp: BIT
+  rcode: SMALLINT
+  r1r3: SMALLINT
+  r2r4: SMALLINT
+  har10: SMALLINT
+  fips_co: SMALLINT
+  raw_agestr: VARCHAR(7)
+  raw_gender: VARCHAR(1)
+  raw_racemars: VARCHAR(15)
+  raw_hispanic: VARCHAR(1)

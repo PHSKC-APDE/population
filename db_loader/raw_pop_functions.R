@@ -4,48 +4,214 @@
 #
 # 2020-12
 
-#### FUNCTION LOAD RAW DATA TO SQL####
+#### FUNCTION LOAD RAW DATA TO SQL RAW TABLE ####
 load_raw_f <- function(
-  conn,
-  schema_name,
-  table_name,
-  data,
+  server,
+  server_dw = NULL,
+  config = NULL,
+  prod = F,
+  interactive_auth = F,
+  schema_name = NULL,
+  table_name = NULL,
+  file_path,
   etl_batch_id) {
   
-  ### LOAD DATA TO REF
-  load_data_f(conn, data, schema_name, table_name)
+  ### SETTING UP VARIABLES ###
+  if(is.null(server)) { 
+    stop("server must be specified.") 
+  }
+  if(is.null(server_dw)) {
+    server_dw <- server
+  }
+  if(server_dw == "APDEStore") { tablock <- "WITH (TABLOCK) " 
+  } else { tablock <- "" }
   
-  create_conn_f(server = server,
-                prod = prod_serv)
-  ### GETS NUMBER OF ROWS LOADED TO SQL AND RETURNS THE NUMBER
-  pop_load <- DBI::dbGetQuery(conn, 
-                              glue::glue_sql(
-                                "SELECT pop
-                         FROM {`schema_name`}.{`table_name`}
-                         WHERE etl_batch_id = {etl_batch_id}",
+  conn <- create_db_connection(server_dw, interactive = interactive_auth, prod = prod)
+  
+  ### Record raw data deletion ###
+  cols <- get_table_cols_f(conn, schema_name, table_name)
+  if(any(cols == "etl_batch_id")) {
+    del_id <- DBI::dbGetQuery(conn, 
+                              glue::glue_sql("sELECT TOP (1) etl_batch_id 
+                                             FROM {`schema_name`}.{`table_name`}", 
+                                             .con = conn))
+    conn_etl <- create_db_connection(server, interactive = interactive_auth, prod = prod)
+    update_etl_log_datetime_f(conn = conn_etl, etl_batch_id = as.numeric(del_id),
+                              etl_schema = ref_schema, etl_table = etl_table,
+                              field = "delete_raw_datetime")
+  }
+  
+  ### Load data to raw ###
+  if(server == "hhsaw") {
+    if(prod == T) { dsn <- 16 
+    } else { dsn <- 20 }
+    copy_into_f(conn = conn, 
+                server = server, 
+                config = config,
+                to_schema = schema_name,
+                to_table = table_name,
+                identity = "Storage Account Key",
+                secret = key_get('inthealth_edw'),
+                compression = "gzip",
+                field_term = ",",
+                row_term = "\n",
+                first_row = 1,
+                overwrite = T,
+                rodbc = T,
+                rodbc_dsn = paste0("int_edw_", dsn),
+                dl_path = file_path)
+    
+  } else {
+    if(file.exists(substring(file_path, 1 , nchar(file_path) - 3)) == T) {
+      file.remove(substring(file_path, 1 , nchar(file_path) - 3))
+    }
+    gunzip(file_path, remove = F)
+    create_table(conn = conn,
+                 server = server,
+                 config = config,
+                 to_schema = schema_name,
+                 to_table = table_name,
+                 overwrite = T)
+    load_table_from_file(conn = conn,
+                         server = server,
+                         config = config,
+                         to_schema = schema_name,
+                         to_table = table_name,
+                         file_path = substring(file_path, 1, nchar(file_path) - 3),
+                         first_row = 1)
+    file.remove(substring(file_path, 1, nchar(file_path) - 3))
+  }
+  DBI::dbDisconnect(conn)
+  
+  ### GET CURRENT COLUMN ORDER ###
+  conn <- create_db_connection(server_dw, interactive = interactive_auth, prod = prod)
+  cols <- DBI::dbGetQuery(conn,
+                          glue::glue_sql("SELECT TOP (1) col1, col2, col3, col4, col5, col6, col7
+                   FROM {`schema_name`}.{`table_name`}
+                   WHERE CHARINDEX('code', 
+                   CONCAT(col1, col2, col3, col4, col5, col6, col7)) > 0",
+                                         .con = conn))
+  cols <- lapply(cols, tolower)
+  for(c in 1:length(cols)) {
+    if(!is.na(str_locate(cols[c], "code")[1])) {
+      cols[c] <- "geo_id"
+    } else if(!is.na(str_locate(cols[c], "pop")[1])) {
+      cols[c] <- "pop"
+    } else if(!is.na(str_locate(cols[c], "race")[1])) {
+      cols[c] <- "raw_racemars"
+    } else if(!is.na(str_locate(cols[c], "gender")[1])) {
+      cols[c] <- "raw_gender"
+    } else if(!is.na(str_locate(cols[c], "age")[1])) {
+      cols[c] <- "raw_agestr"
+    } else if(!is.na(str_locate(cols[c], "hispanic")[1])) {
+      cols[c] <- "raw_hispanic"
+    } else {
+      cols[c] <- "year"
+    }
+  }
+  DBI::dbDisconnect(conn)
+  
+  ### CLEAN UP RAW COLUMNS ###
+  conn <- create_db_connection(server_dw, interactive = interactive_auth, prod = prod)
+  DBI::dbExecute(conn,
+                 glue::glue_sql("UPDATE {`schema_name`}.{`table_name`} {DBI::SQL(tablock)}
+                                SET col1 = NULL, col2 = NULL, col3 = NULL, 
+                                  col4 = NULL, col5 = NULL, col6 = NULL, col7 = NULL
+                                WHERE CHARINDEX('code', 
+                                  CONCAT(col1, col2, col3, col4, col5, col6, col7)) > 0",
                                 .con = conn))
-  data_loaded <- list(rows = nrow(pop_load), 
-                      pop = round(as.numeric(pop_load %>% 
-                                          summarize_at(vars(pop), 
-                                                       list(tot_pop = sum))), 4))
-  return(data_loaded)
+  DBI::dbDisconnect(conn)
+  conn <- create_db_connection(server_dw, interactive = interactive_auth, prod = prod)
+  DBI::dbExecute(conn,
+                 glue::glue_sql("UPDATE {`schema_name`}.{`table_name`} {DBI::SQL(tablock)}
+                                  SET col1 = RTRIM(REPLACE(col1, CHAR(13), '')), 
+                                    col2 = RTRIM(REPLACE(col2, CHAR(13), '')), 
+                                    col3 = RTRIM(REPLACE(col3, CHAR(13), '')), 
+                                    col4 = RTRIM(REPLACE(col4, CHAR(13), '')), 
+                                    col5 = RTRIM(REPLACE(col5, CHAR(13), '')), 
+                                    col6 = RTRIM(REPLACE(col6, CHAR(13), '')), 
+                                    col7 = RTRIM(REPLACE(col7, CHAR(13), ''))",
+                                .con = conn))
+  DBI::dbDisconnect(conn)
+  
+  ### CREATE NEW COLUMNS ###
+  vars_add <- config$vars_add
+  conn <- create_db_connection(server_dw, interactive = interactive_auth, prod = prod)
+  for(v in 1:length(vars_add)) {
+    var <- vars_add[v]
+    DBI::dbExecute(conn,
+                   glue::glue_sql("ALTER TABLE {`schema_name`}.{`table_name`}
+                                  ADD {`names(var)`} {DBI::SQL(var)}",
+                                  .con = conn))
+  }
+  DBI::dbDisconnect(conn)
+  
+  ### TRANSFER DATA TO CORRECT COLUMNS ###
+  for(c in 1:length(cols)) {
+    conn <- create_db_connection(server_dw, interactive = interactive_auth, prod = prod)
+    DBI::dbExecute(conn,
+                   glue::glue_sql("UPDATE {`schema_name`}.{`table_name`} {DBI::SQL(tablock)}
+                                  SET {`cols[[c]]`} = {`names(cols[c])`}
+                                  WHERE col1 IS NOT NULL",
+                                  .con = conn))
+    DBI::dbDisconnect(conn)
+  }
+  
+  conn <- create_db_connection(server_dw, interactive = interactive_auth, prod = prod)
+  DBI::dbExecute(conn,
+                 glue::glue_sql("UPDATE {`schema_name`}.{`table_name`} {DBI::SQL(tablock)} 
+                                SET etl_batch_id = {etl_batch_id}",
+                                .con = conn))
+  DBI::dbDisconnect(conn)
+  
+  conn <- create_db_connection(server_dw, interactive = interactive_auth, prod = prod)
+  qa_results <- get_row_pop_f(conn, schema_name, table_name, etl_batch_id)
+  conn_etl <- create_db_connection(server, interactive = interactive_auth, prod = prod)
+  update_etl_log_datetime_f(conn = conn_etl, etl_batch_id = etl_batch_id,
+                            etl_schema = ref_schema, etl_table = etl_table,
+                            field = "load_raw_datetime")
+  qa_etl_f(conn = conn_etl, etl_batch_id = etl_batch_id,
+           etl_schema = ref_schema, etl_table = etl_table,
+           qa_val = qa_results$row_cnt, field = "qa_rows_raw")
+  qa_etl_f(conn = conn_etl, etl_batch_id = etl_batch_id,
+           etl_schema = ref_schema, etl_table = etl_table,
+           qa_val = qa_results$pop_tot, field = "qa_pop_raw")
+  DBI::dbDisconnect(conn)
+  DBI::dbDisconnect(conn_etl)
 }
 
 #### FUNCTION TO CLEAN RAW DATA IN R AND RETURN CLEANED DATAFRAME ####
-clean_raw_r_f <- function(
+clean_raw_df_f <- function(
   conn,
-  config,
+  server = NULL,
+  config = NULL,
+  xwalk_schema = NULL,
+  xwalk_table = NULL,
+  hra_table = NULL,
   df,
   info,
   etl_batch_id = 0) {
 
+  ### SETTING UP VARIABLES ###
+  if((is.null(server) || is.null(config)) 
+     & (is.null(xwalk_schema) || is.null(xwalk_table))) { 
+    stop("config and server OR xwalk_schema and xwalk_table must be specified.") 
+  }
+  if((is.null(server) || is.null(config)) 
+     & (is.null(xwalk_schema) || is.null(hra_table))) { 
+    stop("config and server OR xwalk_schema and hra_table must be specified.") 
+  }
+  if(is.null(xwalk_schema)) { xwalk_schema <- config[[server]]$ref_schema }
+  if(is.null(xwalk_table)) { xwalk_table <- config$crosswalk_table }
+  if(is.null(hra_table)) { hra_table <- config$hra_table }
+  
   ### Get population and hra crosswalk
   crosswalk <- DBI::dbGetQuery(conn, glue::glue_sql(
-    "SELECT * FROM {`config$ref_schema`}.{`config$crosswalk_table`}",
+    "SELECT * FROM {`xwalk_schema`}.{`xwalk_table`}",
     .con = conn))
-#  hra <- DBI::dbGetQuery(conn, glue::glue_sql(
-#    "SELECT * FROM {`config$ref_schema`}.{`config$hra_table`}",
-#    .con = conn))
+  hra <- DBI::dbGetQuery(conn, glue::glue_sql(
+    "SELECT * FROM {`xwalk_schema`}.{`hra_table`}",
+    .con = conn))
   
   ### CHANGE ORIGINAL COLUMN NAMES ###
   colnames(df) <- lapply(colnames(df), tolower)
@@ -53,13 +219,19 @@ clean_raw_r_f <- function(
     if (grepl("pop", colnames(df)[x]) == T) { 
       colnames(df)[x] = "pop"
     } else if (grepl("racemars", colnames(df)[x]) == T) {
-      colnames(df)[x] = "racemars"
+      colnames(df)[x] = "raw_racemars"
     }
     else if (grepl("age", colnames(df)[x]) == T) {
-      colnames(df)[x] = "agestr"
+      colnames(df)[x] = "raw_agestr"
     }
     else if (grepl("code", colnames(df)[x]) == T) {
       colnames(df)[x] = "geo_id"
+    }
+    else if (grepl("gender", colnames(df)[x]) == T) {
+      colnames(df)[x] = "raw_gender"
+    }
+    else if (grepl("hispanic", colnames(df)[x]) == T) {
+      colnames(df)[x] = "raw_hispanic"
     }
   }
   
@@ -80,108 +252,59 @@ clean_raw_r_f <- function(
   df$year <- as.character(df$year)
   
   ### FIX RACEMARS TO HAVE LEADING ZEROES ###
-  df$racemars <- as.character(df$racemars)
+  df$raw_racemars <- as.character(df$raw_racemars)
   if(info$r_type == 97) {
-    df$racemars <- str_pad(df$racemars, 5, side = "left", pad = "0")
+    df$raw_racemars <- str_pad(df$raw_racemars, 5, side = "left", pad = "0")
   }
   
   ### FIX AGESTR LENGTH ###
-  df$agestr <- with(df, substring(agestr, 1, 3))
+  df$raw_agestr <- with(df, substring(raw_agestr, 1, 3))
   
   ### SET AGE ###
-  df$age <- with(df, as.numeric(agestr))
+  df$age <- with(df, as.numeric(raw_agestr))
+
+  ### Reorder Crosswalk so that rcode is set before r1r3 and r2r4
+  #  and that r1r3 and r2r4 are set before using raw_hispanic to override
+  crosswalk <- crosswalk %>% arrange(desc(new_column), desc(old_column), old_value_txt, old_value_num_min)
   
-  ### SET AGE5 ###
-  xwalk <- filter(crosswalk, new_column == "age5")
-  xwalk <- select(xwalk, old_value_num_min, old_value_num_max, new_value_num)
-  colnames(xwalk) <- c("min", "max", "age5")
-  df <- df %>% 
-    mutate(dummy = TRUE) %>%
-    left_join(xwalk %>% mutate(dummy = TRUE)) %>%
-    filter(age >= min, age <= max) %>%
-    select(-dummy, -min, -max)
-  
-  ### SET AGE11 ###
-  xwalk <- filter(crosswalk, new_column == "age11")
-  xwalk <- select(xwalk, old_value_num_min, old_value_num_max, new_value_num)
-  colnames(xwalk) <- c("min", "max", "age11")
-  df <- df %>% 
-    mutate(dummy = TRUE) %>%
-    left_join(xwalk %>% mutate(dummy = TRUE)) %>%
-    filter(age >= min, age <= max) %>%
-    select(-dummy, -min, -max)
-  
-  ### SET AGE20 ###
-  xwalk <- filter(crosswalk, new_column == "age20")
-  xwalk <- select(xwalk, old_value_num_min, old_value_num_max, new_value_num)
-  colnames(xwalk) <- c("min", "max", "age20")
-  df <- df %>% 
-    mutate(dummy = TRUE) %>%
-    left_join(xwalk %>% mutate(dummy = TRUE)) %>%
-    filter(age >= min, age <= max) %>%
-    select(-dummy, -min, -max)
-  
-  ### SET S (GENDER) ###
-  xwalk <- filter(crosswalk, new_column == "s")
-  xwalk <- select(xwalk, old_value_txt, new_value_num)
-  colnames(xwalk) <- c("gender", "s")
-  df <- inner_join(df, xwalk, by = "gender")
-  
-  ### SET H (HISPANIC) ###
-  xwalk <- filter(crosswalk, new_column == "h",)
-  xwalk <- select(xwalk, old_value_txt, new_value_num)
-  colnames(xwalk) <- c("hispanic", "h")
-  xwalk$hispanic <- as.numeric(xwalk$hispanic)
-  df <- inner_join(df, xwalk, by = "hispanic")
-  
-  ### SET RCODE ###
-  xwalk <- filter(crosswalk, new_column == "rcode", r_type == info$r_type)
-  xwalk <- select(xwalk, old_value_txt, new_value_num)
-  colnames(xwalk) <- c("racemars", "rcode")
-  df <- inner_join(df, xwalk, by = "racemars")
-  
-  ### SET R1_3 ###
-  xwalk <- filter(crosswalk, new_column == "r1_3", r_type == info$r_type, old_column == "rcode")
-  xwalk <- select(xwalk, old_value_num_min, old_value_num_max, new_value_num)
-  colnames(xwalk) <- c("min", "max", "r1_3")
-  df <- df %>% 
-    mutate(dummy = TRUE) %>%
-    left_join(xwalk %>% mutate(dummy = TRUE)) %>%
-    filter(rcode >= min, rcode <= max) %>%
-    select(-dummy, -min, -max)
-  
-  ### SET R2_4 AND UPDATE BASED ON H ###
-  xwalk <- filter(crosswalk, new_column == "r2_4", r_type == info$r_type, old_column == "rcode")
-  xwalk <- select(xwalk, old_value_num_min, old_value_num_max, new_value_num)
-  colnames(xwalk) <- c("min", "max", "r")
-  df <- df %>% 
-    mutate(dummy = TRUE) %>%
-    left_join(xwalk %>% mutate(dummy = TRUE)) %>%
-    filter(rcode >= min, rcode <= max) %>%
-    select(-dummy, -min, -max)
-  xwalk <- filter(crosswalk, new_column == "r2_4", r_type == info$r_type, old_column == "h")
-  xwalk <- select(xwalk, old_value_num_min, new_value_num)
-  colnames(xwalk) <- c("h", "r2_4")
-  df <- left_join(df, xwalk, by = "h")
-  df$r2_4 <- ifelse(is.na(df$r2_4), df$r, df$r2_4)
-  df <- select(df, -r)
-  
+  ### Add new columns based on crosswalk ###
+  for(z in 1:nrow(crosswalk)) {
+    x <- crosswalk[z, ]
+    # Add new column if it does not exist
+    if(!(x$new_column %in% colnames(df))) {
+      df[x$new_column] <- NA
+    }
+    # Determine new value
+    if(!is.na(x$new_value_txt)) {
+      new_value <- x$new_value_txt 
+    } else {
+      new_value <- x$new_value_num
+    }
+    # Check if crosswalk uses r_type
+    if(!is.na(x$r_type)) {
+      rtype <- " & df$r_type == x$r_type"
+    } else {
+      rtype <- ""
+    }
+    # Set new column value based on whether old value is txt or num
+    if(!is.na(x$old_value_txt)) {
+      eval(parse(text = glue::glue("df${x$new_column}[df${x$old_column} == x$old_value_txt{rtype}] <- new_value")))
+    } else {
+      eval(parse(text = glue::glue("df${x$new_column}[df${x$old_column} >= x$old_value_num_min & df${x$old_column} <= x$old_value_num_max{rtype}] <- new_value")))
+    }
+  }
+  # Change NA to zero
+  df[is.na(df)] <- 0
+
   ### SET HRA ###
-#  if(info$geo_type == 'blk') {
-#    hra <- hra %>%
-#      filter(geo_year == info$geo_year) %>%
-#      select(-geo_year)
-#    colnames(hra) <- c("geo_id", "hra_id")
-#    df <- df %>%
-#      left_join(hra)
-#  }
-  
-  ### ORDER COLUMNS ###
-  df <- df[, c("geo_type", "geo_scope", "geo_year", "year", 
-               "r_type", "geo_id", "age", "age5", "age11", "age20",
-               "s", "h", "rcode", "r1_3", "r2_4", "pop", "fips_co", 
-               "agestr", "gender","racemars", "hispanic")]
-#               "agestr", "gender","racemars", "hispanic", "hra_id")]
+  if(info$geo_type == 'blk') {
+    hra <- hra %>%
+      filter(geo_year == info$geo_year) %>%
+      select(-geo_year)
+    colnames(hra) <- c("geo_id", "hra_id")
+    suppressMessages(df <- df %>%
+      left_join(hra))
+  }
   
   ### SET ETL_BATCH_ID AND ID IF PRESENT ###
   if (etl_batch_id > 0) {
@@ -191,29 +314,87 @@ clean_raw_r_f <- function(
   return(as.data.frame(df))
 }
 
+#### FUNCTION TO CLEAN RAW DATA IN SQL ####
+clean_raw_sql_f <- function(
+  server,
+  server_dw = NULL,
+  config = NULL,
+  prod = F,
+  interactive_auth = F,
+  schema_name = NULL,
+  table_name = NULL,
+  vars_add = NULL,
+  info,
+  etl_batch_id) {
+  
+  ### SETTING UP VARIABLES ###
+  if(is.null(server)) { 
+    stop("server must be specified.") 
+  }
+  if(is.null(server_dw)) {
+    server_dw <- server
+  }
+
+  if(server_dw == "APDEStore") { tablock <- "WITH (TABLOCK) " 
+  } else { tablock <- "" }
+  
+  ### SET FILE INFO COLUMNS ###
+  conn <- create_db_connection(server_dw, interactive = interactive_auth, prod = prod)
+  cols <- DBI::dbGetQuery(conn,
+                          glue::glue_sql("SELECT TOP (1) *
+                                         FROM {`schema_name`}.{`table_name`}",
+                                         .con = conn))
+  DBI::dbDisconnect(conn)
+  cols <- names(vars_add)
+  for(col in cols) {
+    if(!is.null(info[1,col])) {
+      conn <- create_db_connection(server_dw, interactive = interactive_auth, prod = prod)
+      DBI::dbExecute(conn,
+                     glue::glue_sql("UPDATE {`schema_name`}.{`table_name`} {DBI::SQL(tablock)}
+                                    SET {`col`} = {info[1,col]}",
+                                    .con = conn))
+      DBI::dbDisconnect(conn)
+    }
+  }
+  
+  ### SET FIPS_CO COLUMN ###
+  conn <- create_db_connection(server_dw, interactive = interactive_auth, prod = prod)
+  DBI::dbExecute(conn,
+                 glue::glue_sql("UPDATE {`schema_name`}.{`table_name`} {DBI::SQL(tablock)}
+                                SET fips_co = SUBSTRING(geo_id, 4, 2)
+                                WHERE geo_scope = 'kps'",
+                                .con = conn))
+  DBI::dbDisconnect(conn)
+}
+
+
 #### FUNCTION GET INFO FROM RAW FILENAME ####
 get_raw_file_info_f <- function(
   config,
   file_name) {
   
   file_name <- tolower(file_name)
-  geo_type <- substr(file_name, 1, instr(file_name, "racemars") - 5)
-  geo_year <- substr(file_name, instr(file_name, "racemars") - 4, instr(file_name, "racemars") - 1)
-  year <- substr(file_name, nchar(file_name) - 11, nchar(file_name) - 8)
-  r_type <- as.integer(substr(file_name, nchar(file_name) - 13, nchar(file_name) - 12))
+  if (str_detect(file_name, ".gz")) {
+    file_name <- substring(file_name, 1, nchar(file_name) - 3)
+  }
+  geo_type <- substring(file_name, 1, str_locate(file_name, "racemars")[1,1] - 5)
+  geo_type <- str_replace(geo_type, "code", "")
+  geo_year <- substring(file_name, str_locate(file_name, "racemars")[1,1] - 4, str_locate(file_name, "racemars")[1,1] - 1)
+  year <- substring(file_name, nchar(file_name) - 11, nchar(file_name) - 8)
+  r_type <- as.integer(substring(file_name, nchar(file_name) - 13, nchar(file_name) - 12))
   geo_types_df <- as.data.frame(config$geo_type)
   geo_types <- colnames(geo_types_df)
-  for (i in 1:length(geo_types)) {
-    if (geo_types[i] == geo_type) {
-      geo_type <- geo_types_df[1,i]
+  for (gt in geo_types) {
+    if (gt == geo_type) {
+      geo_type <- geo_types_df[1, gt]
     }
   }
   geo_scopes_df <- as.data.frame(config[["geo_scope"]])
   geo_scopes <- colnames(geo_scopes_df)
   geo_scope <- NA
-  for (i in 1:length(geo_scopes)) {
-    if (geo_scopes[i] == geo_type) {
-      geo_scope <- geo_scopes_df[1,i]
+  for (gs in geo_scopes) {
+    if (gs == geo_type) {
+      geo_scope <- geo_scopes_df[1, gs]
     }
   }
   return(data.frame(geo_type, geo_scope, geo_year, year, r_type))

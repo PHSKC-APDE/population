@@ -11,9 +11,14 @@ vars:
   pop: FLOAT
 cols:
   age: age
-  age5: age5
-  age11: age11
-  age20: age20
-  gender: s
-  race_eth: r2_4
+  age_5: age_5
+  age_11: age_11
+  age_20: age_20
+  gender: gender
+  race_wht: race_wht
+  race_blk: race_blk
+  race_aian: race_aian
+  race_as: race_as
+  race_nhpi: race_nhpi
+  race_hisp: race_hisp
   county: fips_co
