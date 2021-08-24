@@ -38,7 +38,7 @@ temp_zip <- paste0(temp_base, "/zip")
 temp_extract <- paste0(temp_base, "/extract")
 temp_gz <- paste0(temp_base, "/gz")
 final_dir <- "//phdata01/DROF_DATA/DOH DATA/POP/data/gz"
-batch_name <- "20200616revised"
+batch_name <- "20210712revised"
 memory.limit(size = 56000)
 prod <- TRUE
 interactive_auth <- TRUE

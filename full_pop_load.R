@@ -61,7 +61,7 @@ in_geo_types <- dlg_list(c("blk", "blkg", "cou", "lgd", "scd", "ste", "trc", "zi
                          multiple = T,
                          preselect = c("blk", "scd", "zip"),
                          title = "Select GEO Types to Load")$res
-min_year <- 2000
+min_year <- 2010
 base_path <- rawconfig[[server]]$base_path
 base_url <- rawconfig[[server]]$base_url
 raw_schema <- popconfig[[server]]$raw_schema
@@ -77,9 +77,9 @@ if(server == "hhsaw") {
   archive_table <- paste0(popconfig[[server]]$archive_prefix, "popx")
 } else {
   ref_table <- paste0(popconfig[[server]]$ref_prefix,
-                    popconfig[[server]]$table_name)
+                      popconfig[[server]]$table_name)
   archive_table <- paste0(popconfig[[server]]$archive_prefix,
-                        popconfig[[server]]$table_name)
+                          popconfig[[server]]$table_name)
 }
 etl_table <- popconfig$etl_table
 
@@ -109,7 +109,7 @@ for(b in 1:nrow(batch_list)) {
                                   folders = c())
   DBI::dbDisconnect(conn_db)
   message(paste0("File(s) to process: ", nrow(files)))
-
+  
   #### PROCESS FILES #### 
   for (f in 1:nrow(files)) {
     message(glue("### Processing file {f} of {nrow(files)} - {format(Sys.time(), '%Y-%m-%d %H:%M:%S')} ###"))
@@ -184,26 +184,26 @@ for(b in 1:nrow(batch_list)) {
                               etl_schema = ref_schema, etl_table = etl_table,
                               field = "load_ref_datetime")
     qa_etl_f(conn = conn_db, etl_batch_id = file$id,
-            etl_schema = ref_schema, etl_table = etl_table,
-            qa_val = qa_results$row_cnt, field = "qa_rows_ref")
+             etl_schema = ref_schema, etl_table = etl_table,
+             qa_val = qa_results$row_cnt, field = "qa_rows_ref")
     qa_etl_f(conn = conn_db, etl_batch_id = file$id,
-            etl_schema = ref_schema, etl_table = etl_table,
-            qa_val = qa_results$pop_tot, field = "qa_pop_ref")
+             etl_schema = ref_schema, etl_table = etl_table,
+             qa_val = qa_results$pop_tot, field = "qa_pop_ref")
     DBI::dbDisconnect(conn_db)
     DBI::dbDisconnect(conn_dw)
   }
-
+  
   #### ARCHIVE AND DELETE OLD DATA ####
   message("Archiving Old Data")
   load_archive_f(server = server,
-                prod = prod,
-                interactive_auth = interactive_auth,
-                archive_schema = archive_schema,
-                archive_table = archive_table,
-                ref_schema = ref_schema,
-                ref_table = ref_table,
-                etl_schema = ref_schema,
-                etl_table = etl_table)
+                 prod = prod,
+                 interactive_auth = interactive_auth,
+                 archive_schema = archive_schema,
+                 archive_table = archive_table,
+                 ref_schema = ref_schema,
+                 ref_table = ref_table,
+                 etl_schema = ref_schema,
+                 etl_table = etl_table)
   message("Cleaning Out Old Archive Data")
   clean_archive_f(server = server,
                   prod = prod,
