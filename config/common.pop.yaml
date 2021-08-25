@@ -12,7 +12,7 @@ hhsaw:
   stage_schema: stg_reference
   ref_schema: ref
   archive_schema: ref
-  table_name: popx
+  table_name: pop
   raw_prefix: 
   stage_prefix: stage_
   archive_prefix: archive_
