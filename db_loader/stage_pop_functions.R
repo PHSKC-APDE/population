@@ -88,17 +88,17 @@ clean_stage_f <- function(
   #  and that r1r3 and r2r4 are set before using raw_hispanic to override
   conn_x <- create_db_connection(server, interactive = interactive_auth, prod = prod)
   crosswalk <- DBI::dbGetQuery(conn_x,
-                               glue::glue_sql("SELECT * 
-                                             FROM {`xwalk_schema`}.{`xwalk_table`}
-                                             WHERE (r_type IS NULL OR
-                                              r_type = {info$r_type})",
-                                              .con = conn_x))
+                glue::glue_sql("SELECT * FROM {`xwalk_schema`}.{`xwalk_table`} 
+                               WHERE (r_type IS NULL OR r_type = {info$r_type}) ",
+#                               ORDER BY new_column DESC, old_column DESC, 
+#                                new_value_num, new_value_txt", 
+                               .con = conn_x))
   hras <- DBI::dbGetQuery(conn_x,
                          glue::glue_sql("SELECT *
                                         FROM {`xwalk_schema`}.{`hra_table`}",
                                         .con = conn_x))
   DBI::dbDisconnect(conn_x)
-  crosswalk <- crosswalk %>% arrange(desc(new_column), desc(old_column), old_value_txt, old_value_num_min)
+  crosswalk <- crosswalk %>% arrange(desc(new_column), desc(old_column), new_value_num, new_value_txt)
   
   ### SET AGE ###
   conn <- create_db_connection(server_dw, interactive = interactive_auth, prod = prod)
