@@ -131,7 +131,9 @@ clean_stage_f <- function(
     if (!is.na(z$r_type)) { 
       sql <- glue::glue_sql("{sql} AND \"r_type\" = {z$r_type}", .con = conn)
     }
-    sql <- glue::glue_sql("{sql} AND {`z$new_column`} IS NULL", .con = conn)
+    if (z$old_column != 'raw_hispanic') {
+      sql <- glue::glue_sql("{sql} AND ({`z$new_column`} IS NULL", .con = conn)
+    }
     DBI::dbExecute(conn, sql)
     DBI::dbDisconnect(conn)
   }
