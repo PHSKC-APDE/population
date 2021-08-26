@@ -66,7 +66,7 @@ data_move_f <- function(
     ({DBI::SQL(glue::glue_collapse(glue::glue_sql('{`cols$col`}', .con = conn), sep = ', '))})
     SELECT {DBI::SQL(glue::glue_collapse(glue::glue_sql('{`cols$col`}', .con = conn), sep = ', '))}
     FROM {`from_schema`}.{`from_table`}
-    WHERE etl_batch_id = {etl_batch_id} AND etl_batch_id IS NOT NULL 
+    WHERE etl_batch_id = {etl_batch_id} AND etl_batch_id IS NOT NULL AND pop IS NOT NULL
       {DBI::SQL(where)}", 
     .con = conn))
   

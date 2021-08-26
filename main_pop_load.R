@@ -25,7 +25,7 @@ library(R.utils)
 library(zip)
 library(curl)
 library(jsonlite)
-
+library(data.table)
 
 devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/apde/master/R/create_table.R")
 devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/apde/master/R/load_table_from_file.R")
@@ -181,7 +181,7 @@ for (f in 1:nrow(files)) {
     ext_schema <- stage_schema
   }
   data_move_f(conn_db,
-              from_schema = stage_schema,
+              from_schema = ext_schema,
               to_schema = ref_schema,
               from_table = stage_table,
               to_table = to_ref,
