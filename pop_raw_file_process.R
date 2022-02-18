@@ -43,7 +43,7 @@ memory.limit(size = 56000)
 prod <- TRUE
 interactive_auth <- TRUE
 min_year <- 2000
-etl_only <- T
+etl_only <- F
 
 #### CONFIG FILES ####
 config <- yaml::read_yaml("https://raw.githubusercontent.com/PHSKC-APDE/population/master/config/common.pop.yaml")
@@ -87,9 +87,6 @@ if(etl_only == F) {
   }
 }
 
-                                
-                                 
-
 if(etl_only == F) {
   #### CONVERT FILES TO GZ ####
   for(file in filelist) {
@@ -129,17 +126,12 @@ servers <- dlg_list(c("APDEStore", "hhsaw"),
                    title = "Select Server(s) to Load ETL",
                    multiple = T,
                    preselect = c("APDEStore", "hhsaw"))$res
-
 for(server in servers) {
   conn <- create_db_connection(server = server, interactive = interactive_auth, prod = prod)
-  
   for(d in 1:nrow(data)) {
     data$file_loc[d] <- paste0(rawconfig[[server]]$base_url, 
                                rawconfig[[server]]$base_path, 
                                "/", data$batch_name[d])
-    if(is.na(str_locate(data$file_name[d], ".gz")[1,1])) { 
-      data$file_name[d] <- paste0(data$file_name[d], ".gz")
-    }
     data$file_loc[d] <- paste0(data$file_loc[d],
                                str_remove(
                                  str_remove(
@@ -147,6 +139,9 @@ for(server in servers) {
                                               temp_extract), 
                                    final_dir),
                                  data$file_name[d]))
+    if(is.na(str_locate(data$file_name[d], ".gz")[1,1])) { 
+      data$file_name[d] <- paste0(data$file_name[d], ".gz")
+    }
     if(nrow(str_locate_all(data$file_loc[d], paste0("/", data$batch_name[d]))[[1]]) > 1) {
       data$file_loc[d] <- str_remove(data$file_loc[d], paste0("/", data$batch_name[d]))
     }

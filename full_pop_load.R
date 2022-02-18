@@ -72,15 +72,10 @@ raw_table <- paste0(popconfig[[server]]$raw_prefix,
                     popconfig[[server]]$table_name)
 stage_table <- paste0(popconfig[[server]]$stage_prefix,
                       popconfig[[server]]$table_name)
-if(server == "hhsaw") {
-  ref_table <- "popx"
-  archive_table <- paste0(popconfig[[server]]$archive_prefix, "popx")
-} else {
-  ref_table <- paste0(popconfig[[server]]$ref_prefix,
-                      popconfig[[server]]$table_name)
-  archive_table <- paste0(popconfig[[server]]$archive_prefix,
-                          popconfig[[server]]$table_name)
-}
+ref_table <- paste0(popconfig[[server]]$ref_prefix,
+                    popconfig[[server]]$table_name)
+archive_table <- paste0(popconfig[[server]]$archive_prefix,
+                        popconfig[[server]]$table_name)
 etl_table <- popconfig$etl_table
 
 #### SELECT BATCH/FOLDERS TO LOAD ####
