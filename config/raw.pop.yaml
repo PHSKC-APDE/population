@@ -20,7 +20,7 @@ vars:
 vars_add:
   raw_agestr: VARCHAR(7)
   raw_gender: VARCHAR(1)
-  raw_racemars: VARCHAR(15)
+  raw_racemars: VARCHAR(5)
   raw_hispanic: VARCHAR(1)
   etl_batch_id: INTEGER
   geo_type: VARCHAR(5)

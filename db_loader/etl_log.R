@@ -173,6 +173,7 @@ get_etl_list_to_load_f <- function(
   base_url = NULL,
   batch_name = NULL,
   get_folders = F,
+  sql_source = F,
   folders = c()) {
 
   ### ERROR CHECKS ###
@@ -194,6 +195,15 @@ get_etl_list_to_load_f <- function(
                                WHERE load_ref_datetime IS NULL 
                                AND year >= {min_year}", 
                                .con = conn)
+    if(sql_source == T) {
+      sql_list <- glue::glue_sql("{sql_list} 
+                                 AND file_loc = 'ref' ", 
+                                 .con = conn)
+    } else {
+      sql_list <- glue::glue_sql("{sql_list} 
+                                 AND file_loc <> 'ref' ", 
+                                 .con = conn)
+    }
     if(length(geo_types) > 0) {
       sql_list <- glue::glue_sql("{sql_list} 
                                  AND geo_type IN({DBI::SQL(
