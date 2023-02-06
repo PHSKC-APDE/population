@@ -1,5 +1,5 @@
 vars:
-  etl_batch_ID: INTEGER
+	etl_batch_ID: INTEGER
 	geo_type: VARCHAR(5)
 	geo_scope: VARCHAR(4)
 	geo_year: VARCHAR(4)
