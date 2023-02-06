@@ -21,7 +21,6 @@ vars:
 	rcode: SMALLINT
 	r1r3: SMALLINT
 	r2r4: SMALLINT
-	hra10: SMALLINT
 	fips_co: SMALLINT
 	raw_agestr: VARCHAR(7)
 	raw_gender: VARCHAR(1)
