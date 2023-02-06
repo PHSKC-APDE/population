@@ -16,6 +16,15 @@ hhsaw:
   raw_prefix: 
   stage_prefix: stage_
   archive_prefix: archive_
+frankenpop:
+  raw_schema: ref
+  stage_schema: ref
+  ref_schema: ref
+  archive_schema: archive
+  table_name: pop
+  raw_prefix: raw_
+  stage_prefix: stage_
+  archive_prefix:
 etl_table: pop_metadata_etl_log
 crosswalk_table: pop_crosswalk
 hra_table: pop_hra_blk_crosswalk
