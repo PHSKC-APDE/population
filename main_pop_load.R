@@ -61,6 +61,8 @@ in_geo_types <- dlg_list(c("blk", "blkg", "cou", "lgd", "scd", "ste", "trc", "zi
                          multiple = T,
                          preselect = c("blk", "scd", "zip"),
                          title = "Select GEO Types to Load")$res
+census <- dlg_list(c("2010", "2020"), 
+                   title = "Select Census Year")$res
 min_year <- 2000
 base_path <- rawconfig[[server]]$base_path
 base_url <- rawconfig[[server]]$base_url
@@ -84,6 +86,7 @@ batch_list <- get_etl_list_to_load_f(conn_db,
                                      etl_schema = ref_schema,
                                      etl_table = popconfig$etl_table,
                                      geo_types = in_geo_types,
+                                     census_year = census,
                                      min_year = min_year,
                                      base_path = base_path,
                                      base_url = base_url)
@@ -95,6 +98,7 @@ if (dlg_list(c("TRUE", "FALSE"), title = "Load Entire Batch?")$res == F) {
                                         etl_schema = ref_schema,
                                         etl_table = popconfig$etl_table,
                                         geo_types = in_geo_types,
+                                        census_year = census,
                                         min_year = min_year,
                                         base_path = base_path,
                                         base_url = base_url,
@@ -111,6 +115,7 @@ files <- get_etl_list_to_load_f(conn_db,
                                 etl_schema = ref_schema,
                                 etl_table = popconfig$etl_table,
                                 geo_types = in_geo_types,
+                                census_year = census,
                                 min_year = min_year,
                                 base_path = base_path,
                                 base_url = base_url,

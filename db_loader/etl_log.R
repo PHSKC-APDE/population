@@ -19,6 +19,7 @@ create_etl_log_f <- function(
   geo_type =NULL,
   geo_scope = NULL,
   geo_year = NULL,
+  census_year = NULL,
   year = NULL,
   r_type = NULL,
   rows_file = NULL,
@@ -88,6 +89,13 @@ create_etl_log_f <- function(
       stop("year OR df must be specified.")
     }
   }
+  if(is.null(census_year)) {
+    if(!is.null(df$census_year)) {
+      census_year <- df$census_year
+    } else {
+      stop("census_year OR df must be specified.")
+    }
+  }
   if(is.null(r_type)) {
     if(!is.null(df$r_type)) {
       r_type <- df$r_type
@@ -117,6 +125,7 @@ create_etl_log_f <- function(
       AND file_name = {file_name}
       AND geo_type = {geo_type} AND ISNULL(geo_scope, 0) = ISNULL({geo_scope}, 0)
       AND geo_year = {geo_year} AND year = {year} AND r_type = {r_type}
+      AND census_year = {census_year}
       ORDER BY id DESC",
     .con = conn)
   etl_batch_id <- DBI::dbGetQuery(conn, sql_get)
@@ -126,10 +135,10 @@ create_etl_log_f <- function(
     sql_load <- glue::glue_sql(
       "INSERT INTO {`etl_schema`}.{`etl_table`} 
         (batch_name, batch_date, file_name, file_loc, 
-        geo_type, geo_scope, geo_year, year, r_type, 
+        geo_type, geo_scope, geo_year, census_year, year, r_type, 
         qa_rows_file, qa_pop_file, last_update_datetime) 
         VALUES ({batch_name}, {batch_date}, {file_name}, {file_loc}, 
-        {geo_type}, {geo_scope}, {geo_year}, {year}, {r_type},
+        {geo_type}, {geo_scope}, {geo_year}, {census_year}, {year}, {r_type},
         {rows_file}, ROUND({pop_file}, 0), GETDATE())", 
       .con = conn)
     DBI::dbExecute(conn, sql_load)
@@ -141,6 +150,7 @@ create_etl_log_f <- function(
         AND file_name = {file_name}
         AND geo_type = {geo_type} AND ISNULL(geo_scope, 0) = ISNULL({geo_scope}, 0)
         AND geo_year = {geo_year} AND year = {year} AND r_type = {r_type}
+        AND census_year = {census_year}
         ORDER BY id DESC",
       .con = conn)
     etl_batch_id <- DBI::dbGetQuery(conn, sql_get)
@@ -153,6 +163,7 @@ create_etl_log_f <- function(
           geo_type = {geo_type}, geo_scope = {geo_scope}, 
           geo_year = {geo_year}, year = {year}, r_type = {r_type}, 
           qa_rows_file = {rows_file}, qa_pop_file = {pop_file}, 
+          AND census_year = {census_year}
           last_update_datetime = GETDATE()
         WHERE id = {as.numeric(etl_batch_id)}", 
       .con = conn)
@@ -168,6 +179,7 @@ get_etl_list_to_load_f <- function(
   etl_schema = NULL,
   etl_table = NULL,
   geo_types = c(),
+  census_year = NULL,
   min_year = 0,
   base_path = NULL,
   base_url = NULL,
@@ -193,7 +205,8 @@ get_etl_list_to_load_f <- function(
     sql_list <- glue::glue_sql("SELECT batch_name 
                                FROM {`etl_schema`}.{`etl_table`} 
                                WHERE load_ref_datetime IS NULL 
-                               AND year >= {min_year}", 
+                               AND year >= {min_year} 
+                               AND census_year = {census_year} ", 
                                .con = conn)
     if(sql_source == T) {
       sql_list <- glue::glue_sql("{sql_list} 
@@ -225,7 +238,8 @@ get_etl_list_to_load_f <- function(
                                FROM {`etl_schema`}.{`etl_table`} 
                                WHERE load_ref_datetime IS NULL
                                AND batch_name = {batch_name}
-                               AND year >= {min_year}", 
+                               AND year >= {min_year}
+                               AND census_year = {census_year} ", 
                                .con = conn)
     if(length(geo_types) > 0) {
       sql_list <- glue::glue_sql("{sql_list} 
@@ -248,7 +262,8 @@ get_etl_list_to_load_f <- function(
                                FROM {`etl_schema`}.{`etl_table`} 
                                WHERE load_ref_datetime IS NULL 
                                AND batch_name = {batch_name}
-                               AND year >= {min_year}", 
+                               AND year >= {min_year}
+                               AND census_year = {census_year} ", 
                                .con = conn)
     if(length(geo_types) > 0) {
       sql_list <- glue::glue_sql("{sql_list} 
@@ -286,7 +301,7 @@ get_etl_log_f <- function(
     results <- dbGetQuery(conn,
                           glue::glue_sql("SELECT id, batch_name, 
                                          batch_date, geo_type, geo_scope, 
-                                         geo_year, year, r_type
+                                         geo_year, census_year, year, r_type
                                          FROM {`etl_schema`}.{`etl_table`}
                                          ORDER BY id",
                                          .con = conn))
@@ -294,7 +309,7 @@ get_etl_log_f <- function(
     results <- dbGetQuery(conn,
                           glue::glue_sql("SELECT TOP (1) id, batch_name, 
                                          batch_date, geo_type, geo_scope, 
-                                         geo_year, year, r_type
+                                         geo_year, census_year, year, r_type
                                          FROM {`etl_schema`}.{`etl_table`}
                                          WHERE id = {etl_batch_id}",
                                          .con = conn))
@@ -317,6 +332,7 @@ xget_etl_log_f <- function(
       AND file_name = {file_name} AND file_loc = {file_loc} 
       AND geo_type = {geo_type} AND ISNULL(geo_scope, 0) = ISNULL({geo_scope}, 0)
       AND geo_year = {geo_year} AND year = {year} AND r_type = {r_type}
+      AND census_year = {census_year}
       AND load_ref_datetime IS NULL
       ORDER BY id DESC",
     .con = conn)
@@ -332,6 +348,7 @@ xget_etl_log_f <- function(
       AND geo_type = {geo_type} AND ISNULL(geo_scope, 0) = ISNULL({geo_scope}, 0)
       AND geo_year = {geo_year} AND year = {year} AND r_type = {r_type}
       AND load_ref_datetime IS NOT NULL
+      AND census_year = {census_year}
       ORDER BY id DESC",
       .con = conn)
     etl_batch_id <- DBI::dbGetQuery(conn, sql_get)
@@ -346,6 +363,7 @@ xget_etl_log_f <- function(
         AND [delete_archive_datetime] IS NULL
         AND [geo_type] = {geo_type} AND [geo_scope] = {geo_scope} 
         AND [geo_year] = {geo_year} AND [year] = {year} AND [r_type] = {r_type}
+        AND census_year = {census_year}
       GROUP BY [geo_type], [geo_scope], [geo_year], [year], [r_type]
       HAVING COUNT(id) >= 2 AND MIN([batch_date]) > {batch_date}",
       .con = conn)
@@ -357,9 +375,9 @@ xget_etl_log_f <- function(
     ### CREATE NEW ETL BATCH ID
     sql_load <- glue::glue_sql(
       "INSERT INTO {`etl_schema`}.{`etl_table`} 
-      (batch_name, batch_date, file_name, file_loc, geo_type, geo_scope, geo_year, year, r_type) 
+      (batch_name, batch_date, file_name, file_loc, geo_type, geo_scope, geo_year, census_year, year, r_type) 
       VALUES ({batch_name}, {batch_date}, {file_name}, {file_loc}, {geo_type}, 
-      {geo_scope}, {geo_year}, {year}, {r_type})", 
+      {geo_scope}, {geo_year}, {census_year}, {year}, {r_type})", 
       .con = conn)
     DBI::dbGetQuery(conn, sql_load)
   
@@ -370,6 +388,7 @@ xget_etl_log_f <- function(
       AND file_name = {file_name} AND file_loc = {file_loc} 
       AND geo_type = {geo_type} AND ISNULL(geo_scope, 0) = ISNULL({geo_scope}, 0)
       AND geo_year = {geo_year} AND year = {year} AND r_type = {r_type}
+      AND census_year = {census_year}
       AND load_ref_datetime IS NULL
       ORDER BY id DESC",
       .con = conn)

@@ -26,6 +26,7 @@ vars_add:
   geo_type: VARCHAR(5)
   geo_scope: VARCHAR(4)
   geo_year: VARCHAR(4)
+  census_year: VARCHAR(4)
   year: VARCHAR(4)
   r_type: SMALLINT
   geo_id: VARCHAR(15)

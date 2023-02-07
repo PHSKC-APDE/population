@@ -97,7 +97,7 @@ clean_stage_f <- function(
                          glue::glue_sql("SELECT *
                                         FROM {`xwalk_schema`}.{`hra_table`}",
                                         .con = conn_x))
-  DBI::dbDisconnect(conn_x)
+  #DBI::dbDisconnect(conn_x)
   crosswalk <- crosswalk %>% arrange(desc(new_column), desc(old_column), new_value_num, new_value_txt)
   
   ### SET AGE ###
@@ -106,7 +106,7 @@ clean_stage_f <- function(
                  glue::glue_sql("UPDATE {`schema_name`}.{`table_name`} {DBI::SQL(tablock)} 
                                 SET age = SUBSTRING(raw_agestr, 1, 3)",
                                 .con = conn))
-  DBI::dbDisconnect(conn)
+  #DBI::dbDisconnect(conn)
   
   ### UPDATE COLUMNS BASED ON CROSSWALK ###
   for(y in 1:nrow(crosswalk)) {
@@ -135,7 +135,7 @@ clean_stage_f <- function(
       sql <- glue::glue_sql("{sql} AND {`z$new_column`} IS NULL", .con = conn)
     }
     DBI::dbExecute(conn, sql)
-    DBI::dbDisconnect(conn)
+    #DBI::dbDisconnect(conn)
   }
   
   ### SET race_ COLUMNS TO ZERO WHERE NULL ###
@@ -148,7 +148,7 @@ clean_stage_f <- function(
                                  race_nhpi = ISNULL(race_nhpi, 0), 
                                  race_hisp = ISNULL(race_hisp, 0)",
                                  .con = conn))
-  DBI::dbDisconnect(conn)
+  #DBI::dbDisconnect(conn)
   
   ### SET HRA IDs ###
   if(info$geo_type == "blk") {
@@ -161,7 +161,7 @@ clean_stage_f <- function(
                             WHERE X.geo_year = {info$geo_year}
                               AND P.fips_co = 33", 
                           .con = conn)
-    DBI::dbExecute(conn, sql)
+#    DBI::dbExecute(conn, sql)
     DBI::dbDisconnect(conn)
   }
 }

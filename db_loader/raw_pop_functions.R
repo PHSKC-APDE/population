@@ -213,6 +213,7 @@ load_raw_f <- function(
                                     geo_type,
                                     geo_scope,
                                     geo_year,
+                                    census_year,
                                     year,
                                     r_type,
                                     fips_co)
@@ -227,6 +228,7 @@ load_raw_f <- function(
                                     {info$geo_type},
                                     {info$geo_scope},
                                     {info$geo_year},
+                                    {info$census_year},
                                     Year,
                                     {info$r_type},
                                     {DBI::SQL(fips_co_sql)}
@@ -323,6 +325,7 @@ clean_raw_df_f <- function(
   df$geo_type <- info$geo_type
   df$geo_scope <- info$geo_scope
   df$geo_year <- info$geo_year
+  df$census_year <- info$census_year
   df$r_type <- info$r_type
   df$year <- as.character(df$year)
   
