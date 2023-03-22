@@ -11,6 +11,7 @@ vars:
   age_5: SMALLINT
   age_11: SMALLINT
   age_20: SMALLINT
+  age_100: SMALLINT
   gender: SMALLINT
   pop: FLOAT
   race_wht: BIT
