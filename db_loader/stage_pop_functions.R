@@ -18,16 +18,24 @@ load_stage_f <- function(
   }
   
   conn <- create_db_connection(server_dw, interactive = interactive_auth, prod = prod)
-  
-  ### Record stage data deletion ###
-  del_id <- DBI::dbGetQuery(conn, 
+  if (DBI::dbExistsTable(conn, DBI::Id(schema = stage_schema, table = stage_table))) {
+    ### Record stage data deletion ###
+    del_id <- DBI::dbGetQuery(conn, 
                             glue::glue_sql("sELECT TOP (1) etl_batch_id 
                                            FROM {`stage_schema`}.{`stage_table`}", 
                                            .con = conn))
-  conn_etl <- create_db_connection(server, interactive = interactive_auth, prod = prod)
-  update_etl_log_datetime_f(conn = conn_etl, etl_batch_id = as.numeric(del_id),
+    conn_etl <- create_db_connection(server, interactive = interactive_auth, prod = prod)
+    update_etl_log_datetime_f(conn = conn_etl, etl_batch_id = as.numeric(del_id),
                             etl_schema = ref_schema, etl_table = etl_table,
                             field = "delete_stage_datetime")
+  } else {
+    create_table(conn = conn,
+                 server = server,
+                 config = stageconfig,
+                 to_schema = stage_schema,
+                 to_table = stage_table,
+                 overwrite = T)
+  }
   
   ### Move data to stage ###
   data_move_f(conn = conn,

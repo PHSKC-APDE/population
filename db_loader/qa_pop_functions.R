@@ -55,8 +55,8 @@ qa_raw_files_f <- function(server = "hhsaw",
     qa_raw_v_cref <- as.data.frame(inner_join(qa, qa_ref))
     qa_raw_v_cref$diff <- with(qa_raw_v_cref, round(raw_pop - ref_pop, 6))
     qa_raw_v_cref$perc <- with(qa_raw_v_cref, round(diff / ref_pop, 4))
-    qa_ref$year <- with(qa_ref, as.character(as.numeric(year) - 1))
-    qa_ref$geo_year <- with(qa_ref, ifelse(geo_type == "zip", as.character(as.numeric(geo_year) - 1), geo_year))
+    qa_ref$year <- with(qa_ref, as.character(as.numeric(year) + 1))
+    qa_ref$geo_year <- with(qa_ref, ifelse(geo_type == "zip", as.character(as.numeric(geo_year) + 1), geo_year))
     qa_raw_v_pref <- as.data.frame(inner_join(qa, qa_ref))
     qa_raw_v_pref$diff <- with(qa_raw_v_pref, round(raw_pop - ref_pop, 6))
     qa_raw_v_pref$perc <- with(qa_raw_v_pref, round(diff / ref_pop, 4))
@@ -72,66 +72,100 @@ qa_raw_files_f <- function(server = "hhsaw",
     if (file.exists(qa_filename)) {
       file.remove(qa_filename)
     }
-    write.xlsx(x = qa_raw_v_cref, 
+    if(nrow(qa_raw_v_cref) > 0) {
+      write.xlsx(x = qa_raw_v_cref, 
               file = qa_filename,
               sheetName = "Raw Vs Cur Yr",
               col.names = T,
               row.names = F)
-    write.xlsx(x = qa_raw_v_pref, 
+    }
+    if(nrow(qa_raw_v_pref) > 0) {
+      write.xlsx(x = qa_raw_v_pref, 
               file = qa_filename,
               sheetName = "Raw Vs Prev Yr",
               col.names = T,
               row.names = F,
               append = T)
-    message("QA Results File Complete - ", qa_filename)
+    }
+    if(nrow(qa_raw_v_pref) + nrow(qa_raw_v_cref) > 0) {
+      message("QA Results File Complete - ", qa_filename)
+    }
   }
   return(as.data.frame(data))
 }
 
-create_qa_pop_f <- function(conn){
+create_qa_pop_f <- function(){
   qa_config <- yaml::read_yaml("https://raw.githubusercontent.com/PHSKC-APDE/population/master/config/qa.pop.yaml")
+  ref_config <- yaml::read_yaml("https://raw.githubusercontent.com/PHSKC-APDE/population/master/config/common.pop.yaml")
   schema_name <- qa_config$schema_name
   qa_table <-  qa_config$table_name
-  ref_table <- substring(qa_table, 1, 3)
-  ref_table77 <- paste0(ref_table, "_77")
   vars <- qa_config$vars
   sel_vars <- vars[1:5]
   cols <- qa_config$cols
-  create_table(conn = conn, 
+  servers <- dlg_list(c("APDEStore", "hhsaw"), 
+                      title = "Select Server(s) to Load ETL",
+                      multiple = T,
+                      preselect = c("APDEStore", "hhsaw"))$res
+  
+  for(server in servers) {
+    ref_schema <- ref_config[[server]]$ref_schema
+    ref_table <- ref_config[[server]]$table_name
+    ref_table77 <- paste0(ref_table, "_77")
+    conn <- create_db_connection(server = server, interactive = interactive_auth, prod = prod)
+    create_table(conn = conn, 
                to_schema = schema_name, 
                to_table = qa_table, 
                vars = vars)
-  for (c in 1:length(cols)) {
-    insert_code <- glue::glue_sql(
-      "INSERT INTO {`schema_name`}.{`qa_table`} 
-      ({DBI::SQL(glue::glue_collapse(glue::glue_sql('{`names(vars)`}', 
-      .con = conn), sep = ', '))}) 
-      SELECT 
-      {DBI::SQL(glue::glue_collapse(glue::glue_sql('{`names(sel_vars)`}', 
-      .con = conn), sep = ', '))}, 
-      {cols[c]}, {`cols[[c]]`}, SUM(\"pop\")
-      FROM {`schema_name`}.{`ref_table`}
-      WHERE {`cols[[c]]`} IS NOT NULL
-      GROUP BY
-      {DBI::SQL(glue::glue_collapse(glue::glue_sql('{`names(sel_vars)`}', 
-      .con = conn), sep = ', '))}, {`cols[[c]]`}
-      ", .con = conn)
-    DBI::dbExecute(conn, insert_code)
-    insert_code <- glue::glue_sql(
-      "INSERT INTO {`schema_name`}.{`qa_table`} 
-      ({DBI::SQL(glue::glue_collapse(glue::glue_sql('{`names(vars)`}', 
-      .con = conn), sep = ', '))}) 
-      SELECT 
-      {DBI::SQL(glue::glue_collapse(glue::glue_sql('{`names(sel_vars)`}', 
-      .con = conn), sep = ', '))}, 
-      {cols[c]}, {`cols[[c]]`}, SUM(\"pop\")
-      FROM {`schema_name`}.{`ref_table77`}
-      WHERE {`cols[[c]]`} IS NOT NULL
-      GROUP BY
-      {DBI::SQL(glue::glue_collapse(glue::glue_sql('{`names(sel_vars)`}', 
-      .con = conn), sep = ', '))}, {`cols[[c]]`}
-      ", .con = conn)
-    DBI::dbExecute(conn, insert_code)
+    for (c in 1:length(cols)) {
+      insert_code <- glue::glue_sql(
+        "INSERT INTO {`schema_name`}.{`qa_table`} 
+        ({DBI::SQL(glue::glue_collapse(glue::glue_sql('{`names(vars)`}', 
+        .con = conn), sep = ', '))}) 
+        SELECT 
+        {DBI::SQL(glue::glue_collapse(glue::glue_sql('{`names(sel_vars)`}', 
+        .con = conn), sep = ', '))}, 
+        {cols[c]}, {`cols[[c]]`}, SUM(\"pop\")
+        FROM {`ref_schema`}.{`ref_table`}
+        WHERE {`cols[[c]]`} IS NOT NULL
+        GROUP BY
+        {DBI::SQL(glue::glue_collapse(glue::glue_sql('{`names(sel_vars)`}', 
+        .con = conn), sep = ', '))}, {`cols[[c]]`}
+        ", .con = conn)
+      DBI::dbExecute(conn, insert_code)
+      insert_code <- glue::glue_sql(
+        "INSERT INTO {`schema_name`}.{`qa_table`} 
+        ({DBI::SQL(glue::glue_collapse(glue::glue_sql('{`names(vars)`}', 
+        .con = conn), sep = ', '))}) 
+        SELECT 
+        {DBI::SQL(glue::glue_collapse(glue::glue_sql('{`names(sel_vars)`}', 
+        .con = conn), sep = ', '))}, 
+        {cols[c]}, {`cols[[c]]`}, SUM(\"pop\")
+        FROM {`ref_schema`}.{`ref_table77`}
+        WHERE {`cols[[c]]`} IS NOT NULL
+        GROUP BY
+        {DBI::SQL(glue::glue_collapse(glue::glue_sql('{`names(sel_vars)`}', 
+        .con = conn), sep = ', '))}, {`cols[[c]]`}
+        ", .con = conn)
+      DBI::dbExecute(conn, insert_code)
+    }
   }
   rm(qa_config, schema_name, qa_table, ref_table, ref_table77, vars, sel_vars, cols, insert_code, c)
 }
+
+conn <- create_db_connection(server = "hhsaw", interactive = T, prod = T)
+
+sel <- glue::glue_collapse(glue::glue_sql("{`names(sel_vars)`}", .con = conn), sep = ', ')
+col <- glue::glue_collapse(glue::glue_sql("CAST({`cols`} AS SMALLINT) AS {cols}", .con = conn), sep = ', ')
+val <- glue::glue_collapse(glue::glue_sql("{`cols`}", .con = conn), sep = ', ')
+select_vars <- glue::glue_sql(
+  "SELECT {DBI::SQL(sel)}, \"col\", \"val\", SUM(\"pop\") AS 'pop'
+   FROM (
+     SELECT {DBI::SQL(sel)}, 
+       {DBI::SQL(col)}, 
+       \"pop\"
+     FROM [][]) AS UNPVT
+   UNPIVOT(
+     val FOR col IN ({DBI::SQL(val)})
+   ) AS VC
+   WHERE \"val\" IS NOT NULL
+   GROUP BY {DBI::SQL(sel)}, \"col\", \"val\"", .con = conn)

@@ -190,7 +190,9 @@ load_raw_f <- function(
     cols <- cols$col
     geo_id <- NA
     for(x in 1:length(cols)) {
-      if(instr(cols[x], "2") > 0) { geo_id <- cols[x] }
+      if(instr(cols[x], "2") > 0 ||
+         cols[x] == "County" ||
+         cols[x] == "LEGDIST") { geo_id <- cols[x] }
     }
     info <- get_etl_log_f(conn,
                   etl_schema = ref_schema, 
