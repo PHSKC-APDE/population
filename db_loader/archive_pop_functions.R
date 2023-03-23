@@ -140,11 +140,11 @@ clean_archive_f <- function(
         MIN(batch_date) AS 'min_batch'
       FROM {`etl_schema`}.{`etl_table`}
       WHERE load_archive_datetime IS NOT NULL AND delete_archive_datetime IS NULL
-      GROUP BY geo_type, geo_scope, geo_year, year, r_type
+      GROUP BY geo_type, geo_scope, geo_year, census_year, year, r_type
       HAVING COUNT(id) > {max_archive}) y ON x.geo_type = y.geo_type 
         AND x.geo_scope = y.geo_scope AND x.geo_year = y.geo_year 
-        AND x.year = y.year AND x.r_type = y.r_type A
-        ND x.census_year = y.census_year AND x.batch_date = y.min_batch",
+        AND x.year = y.year AND x.r_type = y.r_type 
+        AND x.census_year = y.census_year AND x.batch_date = y.min_batch",
     .con = conn_db))
   DBI::dbDisconnect(conn_db)
   ### Archive the old data and remove from ref
