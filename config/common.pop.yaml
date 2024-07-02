@@ -11,10 +11,10 @@ hhsaw:
   raw_schema: stg_reference
   stage_schema: stg_reference
   ref_schema: ref
-  archive_schema: ref
+  archive_schema: stg_reference
   table_name: pop
-  raw_prefix: 
-  stage_prefix: stage_
+  raw_prefix: raw_
+  stage_prefix: 
   archive_prefix: archive_
 frankenpop:
   raw_schema: ref
@@ -23,13 +23,13 @@ frankenpop:
   table_name: pop
   raw_suffix: _raw
   stage_suffix: _stage
-etl_table: pop_metadata_etl_log
+etl_table: pop_metadata_etl_log_new
 crosswalk_table: pop_crosswalk
 hra_table: pop_hra_blk_crosswalk
 label_table: pop_labels
 index_type: ccs
 index_name: idx_ccs_ref_pop
-max_archive: 2
+max_archive: 1
 geo_type:
   block: blk
   blockgroup: blkg
@@ -60,6 +60,7 @@ vars:
   age_5: SMALLINT
   age_11: SMALLINT
   age_20: SMALLINT
+  age_100: SMALLINT
   gender: SMALLINT
   pop: FLOAT
   race_wht: BIT
