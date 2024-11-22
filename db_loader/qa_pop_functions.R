@@ -151,21 +151,3 @@ create_qa_pop_f <- function(){
   }
   rm(qa_config, schema_name, qa_table, ref_table, ref_table77, vars, sel_vars, cols, insert_code, c)
 }
-
-conn <- create_db_connection(server = "hhsaw", interactive = T, prod = T)
-
-sel <- glue::glue_collapse(glue::glue_sql("{`names(sel_vars)`}", .con = conn), sep = ', ')
-col <- glue::glue_collapse(glue::glue_sql("CAST({`cols`} AS SMALLINT) AS {cols}", .con = conn), sep = ', ')
-val <- glue::glue_collapse(glue::glue_sql("{`cols`}", .con = conn), sep = ', ')
-select_vars <- glue::glue_sql(
-  "SELECT {DBI::SQL(sel)}, \"col\", \"val\", SUM(\"pop\") AS 'pop'
-   FROM (
-     SELECT {DBI::SQL(sel)}, 
-       {DBI::SQL(col)}, 
-       \"pop\"
-     FROM [][]) AS UNPVT
-   UNPIVOT(
-     val FOR col IN ({DBI::SQL(val)})
-   ) AS VC
-   WHERE \"val\" IS NOT NULL
-   GROUP BY {DBI::SQL(sel)}, \"col\", \"val\"", .con = conn)
