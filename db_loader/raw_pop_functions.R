@@ -58,7 +58,7 @@ load_raw_f <- function(
                   field_term = ",",
                   row_term = "\n",
                   first_row = 1,
-                  overwrite = T,
+                  overwrite = F,
                   rodbc = F,
                   dl_path = file_path)
       
@@ -470,8 +470,8 @@ get_raw_file_info_f <- function(
   geo_type <- substring(file_name, 1, str_locate(file_name, "racemars")[1,1] - 5)
   geo_type <- str_replace(geo_type, "code", "")
   geo_year <- substring(file_name, str_locate(file_name, "racemars")[1,1] - 4, str_locate(file_name, "racemars")[1,1] - 1)
-  year <- substring(file_name, nchar(file_name) - 11, nchar(file_name) - 8)
-  r_type <- as.integer(substring(file_name, nchar(file_name) - 13, nchar(file_name) - 12))
+  year <- substring(file_name, nchar(file_name) - 7, nchar(file_name) - 4)
+  r_type <- as.integer(substring(file_name, nchar(file_name) - 9, nchar(file_name) - 8))
   geo_types_df <- as.data.frame(config$geo_type)
   geo_types <- colnames(geo_types_df)
   for (gt in geo_types) {
