@@ -33,17 +33,18 @@ devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/ma
 devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/master/db_loader/etl_log.R")
 
 #### USER DEFINED SETTINGS ####
-temp_base <- "C:/temp"
+temp_base <- "C:/temp/pop"
 temp_zip <- paste0(temp_base, "/zip")
 temp_extract <- paste0(temp_base, "/extract")
 temp_gz <- paste0(temp_base, "/gz")
-final_dir <- "//phdata01/DROF_DATA/DOH DATA/POP/data/gz"
-batch_name <- "20210712revised"
+final_dir <- "//dphcifs/APDE-CDIP/Population/gz"
+batch_name <- "20241018census2020"
 memory.limit(size = 56000)
 prod <- TRUE
 interactive_auth <- TRUE
 min_year <- 2000
 etl_only <- F
+census_year <- 2020
 
 #### CONFIG FILES ####
 config <- yaml::read_yaml("https://raw.githubusercontent.com/PHSKC-APDE/population/master/config/common.pop.yaml")
@@ -65,11 +66,9 @@ if(etl_only == F) {
   }
 
   filelist <- list.files(temp_extract, recursive = T, include.dirs = F, full.names = T)
-  data <- qa_raw_files_f(server = "hhsaw", 
-                         prod = prod, 
-                         interactive = interactive_auth, 
-                         filelist)
+  data <- qa_raw_files_f(filelist = filelist)
   data$batch_name <- batch_name
+  data$census_year <- census_year
   message("Review QA File Before Proceeding...")
 } else {
   filelist <- list.files(final_dir, recursive = T, include.dirs = F, full.names = T)
@@ -84,6 +83,7 @@ if(etl_only == F) {
                                      paste0(final_dir, "/"))
     data$batch_name[d] <- substring(data$batch_name[d], 1, 
                                     str_locate(data$batch_name[d], "/")[1,1] - 1)
+    data$census_year[d] <- census_year
   }
 }
 
@@ -101,9 +101,9 @@ if(etl_only == F) {
   dir.create(final_dir)
   dirlist <- list.dirs(temp_gz)
   for(dir in dirlist) {
-    if(dir != temp_gz)   {
+    #if(dir != temp_gz)   {
       file.copy(dir, final_dir, recursive = T)
-    }
+    #}
   }
   
   #### LOAD TO AZURE ####
@@ -146,12 +146,13 @@ for(server in servers) {
       data$file_loc[d] <- str_remove(data$file_loc[d], paste0("/", data$batch_name[d]))
     }
     
-    id <- suppressWarnings(create_etl_log_f(conn,
+    id <- create_etl_log_f(conn,
                            server = server,
                            config = config,
                            etl_schema = "ref",
+                           etl_table = "pop_metadata_etl_log",
                            batch_name = data$batch_name[d],
-                           df = data[d,]))
+                           df = data[d,])
   }
   message(paste0("RAW FILE PROCESSING COMPLETE FOR SERVER: ", server))
 }

@@ -163,7 +163,7 @@ create_etl_log_f <- function(
           geo_type = {geo_type}, geo_scope = {geo_scope}, 
           geo_year = {geo_year}, year = {year}, r_type = {r_type}, 
           qa_rows_file = {rows_file}, qa_pop_file = {pop_file}, 
-          AND census_year = {census_year}
+          census_year = {census_year}, 
           last_update_datetime = GETDATE()
         WHERE id = {as.numeric(etl_batch_id)}", 
       .con = conn)

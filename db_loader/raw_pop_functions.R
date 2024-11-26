@@ -6,16 +6,16 @@
 
 #### FUNCTION LOAD RAW DATA TO SQL RAW TABLE ####
 load_raw_f <- function(
-  server,
-  server_dw = NULL,
-  config = NULL,
-  prod = F,
-  interactive_auth = F,
-  schema_name = NULL,
-  table_name = NULL,
-  file_path,
-  sql_source = F,
-  etl_batch_id) {
+    server,
+    server_dw = NULL,
+    config = NULL,
+    prod = F,
+    interactive_auth = F,
+    schema_name = NULL,
+    table_name = NULL,
+    file_path,
+    sql_source = F,
+    etl_batch_id) {
   
   ### SETTING UP VARIABLES ###
   if(is.null(server)) { 
@@ -48,56 +48,55 @@ load_raw_f <- function(
       if(prod == T) { dsn <- 16 
       } else { dsn <- 20 }
       copy_into_f(conn = conn, 
-                server = server, 
-                config = config,
-                to_schema = schema_name,
-                to_table = table_name,
-                identity = "Storage Account Key",
-                secret = key_get('inthealth_edw'),
-                compression = "gzip",
-                field_term = ",",
-                row_term = "\n",
-                first_row = 1,
-                overwrite = T,
-                rodbc = T,
-                rodbc_dsn = paste0("int_edw_", dsn),
-                dl_path = file_path)
-    
+                  server = server, 
+                  config = config,
+                  to_schema = schema_name,
+                  to_table = table_name,
+                  identity = "Storage Account Key",
+                  secret = key_get('inthealth_edw'),
+                  compression = "gzip",
+                  field_term = ",",
+                  row_term = "\n",
+                  first_row = 1,
+                  overwrite = T,
+                  rodbc = F,
+                  dl_path = file_path)
+      
     } else {
       if(file.exists(substring(file_path, 1 , nchar(file_path) - 3)) == T) {
         file.remove(substring(file_path, 1 , nchar(file_path) - 3))
       }
       gunzip(file_path, remove = F)
       create_table(conn = conn,
-                 server = server,
-                 config = config,
-                 to_schema = schema_name,
-                 to_table = table_name,
-                 overwrite = T)
+                   server = server,
+                   config = config,
+                   to_schema = schema_name,
+                   to_table = table_name,
+                   overwrite = T)
       load_table_from_file(conn = conn,
-                         server = server,
-                         config = config,
-                         to_schema = schema_name,
-                         to_table = table_name,
-                         file_path = substring(file_path, 1, nchar(file_path) - 3),
-                         first_row = 1)
+                           server = server,
+                           config = config,
+                           to_schema = schema_name,
+                           to_table = table_name,
+                           file_path = substring(file_path, 1, nchar(file_path) - 3),
+                           first_row = 1)
       file.remove(substring(file_path, 1, nchar(file_path) - 3))
     }
-  
+    
     DBI::dbDisconnect(conn)
-  
+    
     ### GET CURRENT COLUMN ORDER ###
     conn <- create_db_connection(server_dw, interactive = interactive_auth, prod = prod)
     cols <- DBI::dbGetQuery(conn,
-                          glue::glue_sql("SELECT TOP (1) col1, col2, col3, col4, col5, col6, col7
+                            glue::glue_sql("SELECT TOP (1) col1, col2, col3, col4, col5, col6, col7
                    FROM {`schema_name`}.{`table_name`}
-                   WHERE CHARINDEX('code', 
-                   CONCAT(col1, col2, col3, col4, col5, col6, col7)) > 0",
-                                         .con = conn))
+                   WHERE CHARINDEX('code', CONCAT(col1, col2, col3, col4, col5, col6, col7)) > 0
+                    OR CHARINDEX('year', CONCAT(col1, col2, col3, col4, col5, col6, col7)) > 0",
+                                           .con = conn))
     cols <- lapply(cols, tolower)
     for(c in 1:length(cols)) {
-      if(!is.na(str_locate(cols[c], "code")[1])) {
-        cols[c] <- "geo_id"
+      if(!is.na(str_locate(cols[c], "year")[1])) {
+        cols[c] <- "year"
       } else if(!is.na(str_locate(cols[c], "pop")[1])) {
         cols[c] <- "pop"
       } else if(!is.na(str_locate(cols[c], "race")[1])) {
@@ -108,25 +107,28 @@ load_raw_f <- function(
         cols[c] <- "raw_agestr"
       } else if(!is.na(str_locate(cols[c], "hispanic")[1])) {
         cols[c] <- "raw_hispanic"
+      } else if(!is.na(str_locate(cols[c], "code")[1])) {
+        cols[c] <- "geo_id"
       } else {
-        cols[c] <- "year"
+        cols[c] <- "geo_id"
       }
+      
     }
     DBI::dbDisconnect(conn)
-  
+    
     ### CLEAN UP RAW COLUMNS ###
     conn <- create_db_connection(server_dw, interactive = interactive_auth, prod = prod)
     DBI::dbExecute(conn,
-                  glue::glue_sql("UPDATE {`schema_name`}.{`table_name`} {DBI::SQL(tablock)}
+                   glue::glue_sql("UPDATE {`schema_name`}.{`table_name`} {DBI::SQL(tablock)}
                                 SET col1 = NULL, col2 = NULL, col3 = NULL, 
                                   col4 = NULL, col5 = NULL, col6 = NULL, col7 = NULL
-                                WHERE CHARINDEX('code', 
-                                  CONCAT(col1, col2, col3, col4, col5, col6, col7)) > 0",
-                                .con = conn))
+                                WHERE CHARINDEX('code', CONCAT(col1, col2, col3, col4, col5, col6, col7)) > 0
+                                  AND CHARINDEX('year', CONCAT(col1, col2, col3, col4, col5, col6, col7)) > 0",
+                                  .con = conn))
     DBI::dbDisconnect(conn)
     conn <- create_db_connection(server_dw, interactive = interactive_auth, prod = prod)
     DBI::dbExecute(conn,
-                 glue::glue_sql("UPDATE {`schema_name`}.{`table_name`} {DBI::SQL(tablock)}
+                   glue::glue_sql("UPDATE {`schema_name`}.{`table_name`} {DBI::SQL(tablock)}
                                   SET col1 = RTRIM(REPLACE(col1, CHAR(13), '')), 
                                     col2 = RTRIM(REPLACE(col2, CHAR(13), '')), 
                                     col3 = RTRIM(REPLACE(col3, CHAR(13), '')), 
@@ -134,45 +136,49 @@ load_raw_f <- function(
                                     col5 = RTRIM(REPLACE(col5, CHAR(13), '')), 
                                     col6 = RTRIM(REPLACE(col6, CHAR(13), '')), 
                                     col7 = RTRIM(REPLACE(col7, CHAR(13), ''))",
-                                .con = conn))
+                                  .con = conn))
     DBI::dbDisconnect(conn)
-  
+    
     ### CREATE NEW COLUMNS ###
     vars_add <- config$vars_add
     conn <- create_db_connection(server_dw, interactive = interactive_auth, prod = prod)
     for(v in 1:length(vars_add)) {
       var <- vars_add[v]
       DBI::dbExecute(conn,
-                   glue::glue_sql("ALTER TABLE {`schema_name`}.{`table_name`}
+                     glue::glue_sql("ALTER TABLE {`schema_name`}.{`table_name`}
                                   ADD {`names(var)`} {DBI::SQL(var)}",
-                                  .con = conn))
+                                    .con = conn))
     }
     DBI::dbDisconnect(conn)
-  
+    
     ### TRANSFER DATA TO CORRECT COLUMNS ###
     for(c in 1:length(cols)) {
       conn <- create_db_connection(server_dw, interactive = interactive_auth, prod = prod)
       if(cols[[c]] == 'pop') {
         DBI::dbExecute(conn,
-                     glue::glue_sql("UPDATE {`schema_name`}.{`table_name`} {DBI::SQL(tablock)}
+                       glue::glue_sql("UPDATE {`schema_name`}.{`table_name`} {DBI::SQL(tablock)}
                                   SET {`cols[[c]]`} = CAST({`names(cols[c])`} AS FLOAT)
-                                  WHERE col1 IS NOT NULL",
-                                    .con = conn))
+                                  WHERE col1 IS NOT NULL
+                                  AND CHARINDEX('code', CONCAT(col1, col2, col3, col4, col5, col6, col7)) = 0
+                                  AND CHARINDEX('year', CONCAT(col1, col2, col3, col4, col5, col6, col7)) = 0",
+                                      .con = conn))
       } else {
         DBI::dbExecute(conn,
-                   glue::glue_sql("UPDATE {`schema_name`}.{`table_name`} {DBI::SQL(tablock)}
+                       glue::glue_sql("UPDATE {`schema_name`}.{`table_name`} {DBI::SQL(tablock)}
                                   SET {`cols[[c]]`} = {`names(cols[c])`}
-                                  WHERE col1 IS NOT NULL",
-                                  .con = conn))
+                                  WHERE col1 IS NOT NULL
+                                  AND CHARINDEX('code', CONCAT(col1, col2, col3, col4, col5, col6, col7)) = 0
+                                  AND CHARINDEX('year', CONCAT(col1, col2, col3, col4, col5, col6, col7)) = 0",
+                                      .con = conn))
       }
       DBI::dbDisconnect(conn)
     }
-  
+    
     conn <- create_db_connection(server_dw, interactive = interactive_auth, prod = prod)
     DBI::dbExecute(conn,
-                 glue::glue_sql("UPDATE {`schema_name`}.{`table_name`} {DBI::SQL(tablock)} 
+                   glue::glue_sql("UPDATE {`schema_name`}.{`table_name`} {DBI::SQL(tablock)} 
                                 SET etl_batch_id = {etl_batch_id}",
-                                .con = conn))
+                                  .con = conn))
     DBI::dbDisconnect(conn)
   } else {
     vars <- config$vars_add
@@ -195,9 +201,9 @@ load_raw_f <- function(
          cols[x] == "LEGDIST") { geo_id <- cols[x] }
     }
     info <- get_etl_log_f(conn,
-                  etl_schema = ref_schema, 
-                  etl_table = etl_table,
-                  etl_batch_id = etl_batch_id)
+                          etl_schema = ref_schema, 
+                          etl_table = etl_table,
+                          etl_batch_id = etl_batch_id)
     if(info$geo_scope == "kps") {
       fips_co_sql <- glue::glue_sql("SUBSTRING({`geo_id`}, 4, 2)", .con = conn)
     } else {
@@ -257,6 +263,8 @@ load_raw_f <- function(
   DBI::dbDisconnect(conn_etl)
 }
 
+
+
 #### FUNCTION TO CLEAN RAW DATA IN R AND RETURN CLEANED DATAFRAME ####
 clean_raw_df_f <- function(
   conn,
@@ -291,6 +299,8 @@ clean_raw_df_f <- function(
     .con = conn))
   
   ### CHANGE ORIGINAL COLUMN NAMES ###
+  firstnum <- stringi::stri_extract_first_regex(info[1,]$file_name, "[0-9]+")
+  geo_type <- substring(info[1,]$file_name, 1, str_locate(info[1,]$file_name, firstnum)[1,1] - 1)
   colnames(df) <- lapply(colnames(df), tolower)
   for (x in 1:length(colnames(df))) {
     if (grepl("pop", colnames(df)[x]) == T) { 
@@ -301,7 +311,7 @@ clean_raw_df_f <- function(
     else if (grepl("age", colnames(df)[x]) == T) {
       colnames(df)[x] = "raw_agestr"
     }
-    else if (grepl("code", colnames(df)[x]) == T) {
+    else if (grepl("code", colnames(df)[x]) == T || grepl(geo_type, colnames(df)[x]) == T) {
       colnames(df)[x] = "geo_id"
     }
     else if (grepl("gender", colnames(df)[x]) == T) {

@@ -23,7 +23,7 @@ frankenpop:
   table_name: pop
   raw_suffix: _raw
   stage_suffix: _stage
-etl_table: pop_metadata_etl_log_new
+etl_table: pop_metadata_etl_log
 crosswalk_table: pop_crosswalk
 hra_table: pop_hra_blk_crosswalk
 label_table: pop_labels
