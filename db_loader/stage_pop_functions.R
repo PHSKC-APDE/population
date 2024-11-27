@@ -43,9 +43,9 @@ load_stage_f <- function(
               to_schema = stage_schema,
               from_table = raw_table,
               to_table = stage_table,
-              overwrite = T,
-              etl_batch_id = etl_batch_id,
-              where = "(geo_scope = 'wa' OR fips_co IN(33, 53, 61))")
+              overwrite = F,
+              etl_batch_id = etl_batch_id)#,
+              #where = "(geo_scope = 'wa' OR fips_co IN(33, 53, 61))")
   DBI::dbDisconnect(conn)
   
   conn <- create_db_connection(server_dw, interactive = interactive_auth, prod = prod)

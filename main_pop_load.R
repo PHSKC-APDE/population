@@ -126,6 +126,7 @@ message(paste0("File(s) to process: ", nrow(files)))
 
 #### PROCESS FILES #### 
 for (f in 1:nrow(files)) {
+  
   message(glue("### Processing file {f} of {nrow(files)} - {format(Sys.time(), '%Y-%m-%d %H:%M:%S')} ###"))
   conn_dw <- create_db_connection(server_dw, interactive = interactive_auth, prod = prod)
   file <- files[f,]
@@ -141,16 +142,16 @@ for (f in 1:nrow(files)) {
              table_name = raw_table,
              file_path = paste0(file$file_loc, file$file_name),
              etl_batch_id = file$id))
-  message(glue("...Cleaning Raw Data - {format(Sys.time(), '%Y-%m-%d %H:%M:%S')}"))
-  clean_raw_sql_f(server = server,
-                  server_dw = server_dw,
-                  prod = prod,
-                  interactive_auth = interactive_auth,
-                  schema_name = raw_schema,
-                  table_name = raw_table,
-                  vars_add = rawconfig$vars_add,
-                  info = file,
-                  etl_batch_id = file$id)
+#  message(glue("...Cleaning Raw Data - {format(Sys.time(), '%Y-%m-%d %H:%M:%S')}"))
+#  clean_raw_sql_f(server = server,
+#                  server_dw = server_dw,
+#                  prod = prod,
+#                  interactive_auth = interactive_auth,
+#                  schema_name = raw_schema,
+#                  table_name = raw_table,
+#                  vars_add = rawconfig$vars_add,
+#                  info = file,
+#                  etl_batch_id = file$id)
   message(glue("...Moving Data from Raw Table ({raw_schema}.{raw_table}) to Stage Table ({stage_schema}.{stage_table}) - {format(Sys.time(), '%Y-%m-%d %H:%M:%S')}"))
   load_stage_f(server = server,
                server_dw = server_dw,
@@ -161,18 +162,18 @@ for (f in 1:nrow(files)) {
                raw_table = raw_table,
                stage_table = stage_table,
                etl_batch_id = file$id)
-  message(glue("...Cleaning Stage Data - {format(Sys.time(), '%Y-%m-%d %H:%M:%S')}"))
-  clean_stage_f(server = server,
-                server_dw = server_dw,
-                prod = prod,
-                interactive_auth = interactive_auth,
-                schema_name = stage_schema,
-                table_name = stage_table,
-                xwalk_schema = ref_schema,
-                xwalk_table = popconfig$crosswalk_table,
-                hra_table = popconfig$hra_table,
-                etl_batch_id = file$id,
-                info = file)
+#  message(glue("...Cleaning Stage Data - {format(Sys.time(), '%Y-%m-%d %H:%M:%S')}"))
+#  clean_stage_f(server = server,
+#                server_dw = server_dw,
+#                prod = prod,
+#                interactive_auth = interactive_auth,
+#                schema_name = stage_schema,
+#                table_name = stage_table,
+#                xwalk_schema = ref_schema,
+#                xwalk_table = popconfig$crosswalk_table,
+#                hra_table = popconfig$hra_table,
+#                etl_batch_id = file$id,
+#                info = file)
   if (file$r_type == 77) { 
     to_ref <- paste0(ref_table, "_77")
   } else { 

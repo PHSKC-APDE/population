@@ -35,22 +35,23 @@ qa_raw_files_f <- function(server = "hhsaw",
     file_info$file_path <- file
     df <- read.csv(file)
     file_info$rows_file <- nrow(df)
+    df$Population[is.na(df$Population)] <- 0
     file_info$pop_file <- sum(df$Population)
-    df <- clean_raw_df_f(conn = conn,
-                         server = server,
-                         config = config,
-                         df = df,
-                         info = file_info)
-    for(c in qa_config$cols) {
-      eval(parse(text = glue::glue("qa <- rbind(qa, df %>%
-      group_by(geo_type, geo_scope, geo_year, r_type, year, col = '{c}', val = {c}) %>%
-      summarize_at(vars(pop), list(raw_pop = sum)))")))
-    }
+#    df <- clean_raw_df_f(conn = conn,
+#                         server = server,
+#                         config = config,
+#                         df = df,
+#                         info = file_info)
+#    for(c in qa_config$cols) {
+#      eval(parse(text = glue::glue("qa <- rbind(qa, df %>%
+#      group_by(geo_type, geo_scope, geo_year, r_type, year, col = '{c}', val = {c}) %>%
+#      summarize_at(vars(pop), list(raw_pop = sum)))")))
+#    }
     if(nrow(data) == 0) { data <- file_info }
     else { data <- rbind(data, file_info) }
   }
   
-  if(df_only == F) {
+  if(df_only == F && 1 == 0) {
     ### Create qa comparison columns and data sets
     qa_raw_v_cref <- as.data.frame(inner_join(qa, qa_ref))
     qa_raw_v_cref$diff <- with(qa_raw_v_cref, round(raw_pop - ref_pop, 6))

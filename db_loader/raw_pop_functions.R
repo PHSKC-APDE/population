@@ -58,7 +58,7 @@ load_raw_f <- function(
                   field_term = ",",
                   row_term = "\n",
                   first_row = 1,
-                  overwrite = F,
+                  overwrite = T,
                   rodbc = F,
                   dl_path = file_path)
       
