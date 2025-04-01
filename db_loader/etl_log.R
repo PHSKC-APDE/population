@@ -131,13 +131,16 @@ create_etl_log_f <- function(
   etl_batch_id <- DBI::dbGetQuery(conn, sql_get)
   
   if (nrow(etl_batch_id) == 0) {
+    new_id <- as.numeric(DBI::dbGetQuery(conn,
+                                         glue::glue_sql("SELECT MAX(id) FROM {`etl_schema`}.{`etl_table`}",
+                                                        .con = conn))[1,1]) + 1
     ### CREATE NEW ETL BATCH ID
     sql_load <- glue::glue_sql(
       "INSERT INTO {`etl_schema`}.{`etl_table`} 
-        (batch_name, batch_date, file_name, file_loc, 
+        (id, batch_name, batch_date, file_name, file_loc, 
         geo_type, geo_scope, geo_year, census_year, year, r_type, 
         qa_rows_file, qa_pop_file, last_update_datetime) 
-        VALUES ({batch_name}, {batch_date}, {file_name}, {file_loc}, 
+        VALUES ({new_id}, {batch_name}, {batch_date}, {file_name}, {file_loc}, 
         {geo_type}, {geo_scope}, {geo_year}, {census_year}, {year}, {r_type},
         {rows_file}, ROUND({pop_file}, 0), GETDATE())", 
       .con = conn)
