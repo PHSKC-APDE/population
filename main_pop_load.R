@@ -39,16 +39,11 @@ devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/ma
 devtools::source_url("https://raw.githubusercontent.com/PHSKC-APDE/population/master/db_loader/etl_log.R")
 
 #### SELECT CONNECTION TYPE ####
-server <- dlg_list(c("APDEStore", "hhsaw"), title = "Select Server")$res
-if (server == "hhsaw") {
-  prod <- dlg_list(c("TRUE", "FALSE"), title = "Production Server?")$res
-  interactive_auth <- dlg_list(c("TRUE", "FALSE"), title = "Interactive Authentication?")$res
-  server_dw <- "inthealth"
-} else {
-  prod <- TRUE
-  interactive_auth <- TRUE
-  server_dw <- server
-}
+server <- "hhsaw"
+server_dw <- "inthealth"
+prod <- T
+interactive_auth <- F
+
 conn_db <- create_db_connection(server, interactive = interactive_auth, prod = prod)
 conn_dw <- create_db_connection(server_dw, interactive = interactive_auth, prod = prod)
 
@@ -121,6 +116,7 @@ files <- get_etl_list_to_load_f(conn_db,
                                 base_url = base_url,
                                 batch_name = batch,
                                 folders = subs)
+files <- files[files$r_type == 97,]
 DBI::dbDisconnect(conn_db)
 message(paste0("File(s) to process: ", nrow(files)))
 
@@ -179,20 +175,20 @@ for (f in 1:nrow(files)) {
   } else { 
     to_ref <- ref_table 
   }
-  message(glue("...Moving Data from Stage Table ({stage_schema}.{stage_table}) to Ref Table ({ref_schema}.{to_ref}) - {format(Sys.time(), '%Y-%m-%d %H:%M:%S')}"))
-  conn_db <- create_db_connection(server, interactive = interactive_auth, prod = prod)
-  if(server == "hhsaw") {
-    ext_schema <- ref_schema
-  } else {
-    ext_schema <- stage_schema
-  }
-  data_move_f(conn_db,
-              from_schema = ext_schema,
-              to_schema = ref_schema,
-              from_table = stage_table,
-              to_table = to_ref,
-              etl_batch_id = file$id,
-              del_to = T)
+#  message(glue("...Moving Data from Stage Table ({stage_schema}.{stage_table}) to Ref Table ({ref_schema}.{to_ref}) - {format(Sys.time(), '%Y-%m-%d %H:%M:%S')}"))
+#  conn_db <- create_db_connection(server, interactive = interactive_auth, prod = prod)
+#  if(server == "hhsaw") {
+#    ext_schema <- ref_schema
+#  } else {
+#    ext_schema <- stage_schema
+#  }
+#  data_move_f(conn_db,
+#              from_schema = ext_schema,
+#              to_schema = ref_schema,
+#              from_table = stage_table,
+#              to_table = to_ref,
+#              etl_batch_id = file$id,
+#              del_to = T)
   conn_db <- create_db_connection(server, interactive = interactive_auth, prod = prod)
   qa_results <- get_row_pop_f(conn_db, ref_schema, to_ref, file$id)
   update_etl_log_datetime_f(conn = conn_db, etl_batch_id = file$id,
@@ -207,6 +203,97 @@ for (f in 1:nrow(files)) {
   DBI::dbDisconnect(conn_db)
   DBI::dbDisconnect(conn_dw)
 }
+
+
+
+
+
+#### STAGE TABLE TO FINAL TABLE ####
+table_list <- c("pop_geo_blk",
+                "pop_geo_CCL",
+                "pop_geo_cou",
+                "pop_geo_CSA",
+                "pop_geo_hra",
+                "pop_geo_Inc_uninc",
+                "pop_geo_kccd",
+                "pop_geo_lgd",
+                "pop_geo_PUMA",
+                "pop_geo_reg",
+                "pop_geo_scd",
+                "pop_geo_tribal",
+                "pop_geo_zip")
+
+message(paste0("Beginning process to copy data from INTHEALTH_EDW to HHSAW - ", Sys.time()))
+
+#Begin loop
+for(table in table_list) {
+  from_schema <- "stg_reference" 
+  from_table <- table
+  to_schema <- "ref"
+  to_table <- table
+  ext_schema <- "ref"
+  ext_table <- paste0("stage_", table)
+  
+  message(paste0("Working on table: ", to_table, " - ", Sys.time()))
+  conn_db <- create_db_connection("hhsaw", interactive = interactive_auth, prod = prod)
+  conn_dw  <- create_db_connection("inthealth", interactive = interactive_auth, prod = prod)
+  if(prod == T) {
+    server_to <- "hhsaw"
+  } else {
+    server_to <- "hhsaw_dev"
+  }
+  
+    DBI::dbExecute(conn = conn_db,
+                 glue::glue_sql("execute ref.usp_external_table_load @fromtable = N{ext_table}, @totable = N{to_table};",
+                                .con = conn_db))
+  
+  #Row count comparison for all tables except PLR tables
+  inthealth_row_count <- DBI::dbGetQuery(conn = conn_dw,
+                                         glue::glue_sql("select count(*) as row_count from {`from_schema`}.{`from_table`};",
+                                                        .con = conn_dw))
+  hhsaw_row_count <- DBI::dbGetQuery(conn = conn_db,
+                                     glue::glue_sql("select count(*) as row_count from {`to_schema`}.{`to_table`};",
+                                                    .con = conn_db))
+  
+  if (inthealth_row_count$row_count == hhsaw_row_count$row_count) {
+    message(paste0("Table Transfer: ", to_table, " - PASS ", Sys.time()))  
+  } else {
+    message(paste0("Table Transfer: ", to_table, " - FAIL ", Sys.time()))  
+  }
+  
+  
+}
+
+## Closing message
+message(paste0("All tables have been successfully copied from inthealth_edw - ", Sys.time()))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #### ARCHIVE AND DELETE OLD DATA ####
 message("Archiving Old Data")
