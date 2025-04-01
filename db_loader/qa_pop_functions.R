@@ -4,7 +4,7 @@
 ### FUNCTION TO SELECT BATCH AND START THE QA PROCESS
 qa_raw_files_f <- function(server = "hhsaw",
                            prod = T,
-                           interactive = T,
+                           interactive = F,
                            filelist,
                            df_only = F){
   
@@ -24,7 +24,8 @@ qa_raw_files_f <- function(server = "hhsaw",
   data <- data.frame()
   qa <- data.frame(matrix(ncol = 8, nrow = 0))
   
-  for(file in filelist) {
+  for(i in 1:length(filelist)) {
+    file <- filelist[i]
     message(paste0("Processing: ", file))
     file_name <- substring(file, 
                            str_locate_all(file, "/")[[1]][[nrow(str_locate_all(file, "/")[[1]])]] + 1, 
@@ -35,8 +36,9 @@ qa_raw_files_f <- function(server = "hhsaw",
     file_info$file_path <- file
     df <- read.csv(file)
     file_info$rows_file <- nrow(df)
-    df$Population[is.na(df$Population)] <- 0
-    file_info$pop_file <- sum(df$Population)
+    names(df) <- tolower(names(df))
+    df$population[is.na(df$population)] <- 0
+    file_info$pop_file <- sum(df$population)
 #    df <- clean_raw_df_f(conn = conn,
 #                         server = server,
 #                         config = config,
